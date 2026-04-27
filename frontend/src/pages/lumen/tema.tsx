@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { useAuth } from '@/context';
 import router from 'next/router';
-import {API_URL} from "@/config/config";
+import { API_URL } from "@/config/config";
 
 const Tema = () => {
     const [salvarDesabilitado, setSalvarDesabilitado] = useState(true);
-    const [form] = Form.useForm(); 
+    const [form] = Form.useForm();
     const { nomeUsuario } = useAuth();
 
     const handleCadastroTema = async (values: any) => {
@@ -25,7 +25,7 @@ const Tema = () => {
 
             if (response.ok) {
                 message.success('Tema cadastrado com sucesso!');
-                form.resetFields(); 
+                form.resetFields();
                 router.push('/lumen/home')
             } else {
                 message.error('Erro ao cadastrar o tema.');
@@ -50,7 +50,7 @@ const Tema = () => {
                         <Input />
                     </Form.Item>
                     <Form.Item name="descricaoTema" label="Descrição do Tema" rules={[{ required: true, message: 'Por favor, insira a descrição do tema!' }]}>
-                        <Input.TextArea rows={12}/>
+                        <Input.TextArea rows={12} />
                     </Form.Item>
                     <Form.Item>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>

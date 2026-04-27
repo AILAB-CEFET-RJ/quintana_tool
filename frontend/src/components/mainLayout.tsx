@@ -11,7 +11,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-    const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth(); 
+    const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleLogout = () => {
@@ -33,12 +33,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             {
                 key: '2',
                 label: (
-                <span onClick={handleLogout} style={{ cursor: 'pointer', color: '#1677ff' }}>
-                    Sair
-                </span>
+                    <span onClick={handleLogout} style={{ cursor: 'pointer', color: '#1677ff' }}>
+                        Sair
+                    </span>
                 ),
             },
-            ]
+        ]
         : [
             {
                 key: '1',
@@ -65,7 +65,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 >
                     <Menu.Item>
                         <Link href="/lumen">
-                            Lumen
+                            Quintana
                         </Link>
                     </Menu.Item>
                     {isLoggedIn === false ? (
