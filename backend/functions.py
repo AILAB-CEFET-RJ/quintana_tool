@@ -12,6 +12,15 @@ import os
 import time
 load_dotenv()
 
+with open('configModel.json', 'r') as f:
+    config = json.load(f)
+
+def get_model_config(name):
+    models = config['available_models']
+    model = next((m for m in models if m['name'] == name), None)
+    if not model:
+        raise ValueError(f"Modelo '{name}' não encontrado. Disponíveis: {[m['name'] for m in models]}")
+    return model['path']
 
 # Configure sua chave de API da AZURE
 try:
@@ -39,7 +48,7 @@ def evaluate_redacao(redacao):
    
     tupla = (redacao, )
     texto_df = pd.DataFrame(tupla,columns = ['texto'])
-    modelo_salvo = pickle.load(open('model.pkl','rb'))
+    modelo_salvo = pickle.load(open(get_model_config(config['model']), 'rb'))
     result = modelo_salvo.predict(texto_df)
 
     notas = {}
