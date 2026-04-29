@@ -3,22 +3,22 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react'
 import { Modal, Skeleton, Collapse } from 'antd'
 import { ClearOutlined, CheckOutlined, UploadOutlined } from '@ant-design/icons'
-import  TextArea from 'antd/lib/input/TextArea'
+import TextArea from 'antd/lib/input/TextArea'
 import { S } from '@/styles/Redacao.styles'
 import { useAuth } from '../../context';
-import {API_URL} from "@/config/config";
+import { API_URL } from "@/config/config";
 import { CSSProperties } from 'react'
 
 
 const Redacao = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [essay, setEssay] = useState('')
-    const [essayGrade, setEssayGrade] = useState<object>({ key: 'value' })
-    const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const router = useRouter();
-    const { id } = router.query;
-    const { nomeUsuario } = useAuth(); 
-    const { Panel } = Collapse;
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [essay, setEssay] = useState('')
+  const [essayGrade, setEssayGrade] = useState<object>({ key: 'value' })
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const router = useRouter();
+  const { id } = router.query;
+  const { nomeUsuario } = useAuth();
+  const { Panel } = Collapse;
 
   const showModalText = async () => {
     await getEssayGrade()
@@ -52,7 +52,7 @@ const Redacao = () => {
 
     const data = response.data
     console.log(data.grades)
-   
+
     setEssayGrade(data.grades)
   }
 
@@ -93,7 +93,7 @@ const Redacao = () => {
     }
   }
 
-  
+
   const labelStyle = {
     marginTop: '20px',
     marginBottom: '25px',
@@ -134,6 +134,10 @@ const Redacao = () => {
         onChange={handleChange}
         style={{ padding: 24, minHeight: 380, background: 'white', width: '50%' }}
         placeholder='Escreva sua redação aqui'
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
       />
 
       <S.ButtonWrapper>

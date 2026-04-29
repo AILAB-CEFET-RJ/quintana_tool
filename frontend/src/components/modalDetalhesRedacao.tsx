@@ -1,6 +1,6 @@
 import { Modal, Input, Button, message, Collapse } from 'antd';
 import { useState, useEffect } from 'react';
-import {Redacao, Tema} from '@/pages/lumen/home';
+import {Redacao, Tema} from '@/pages/quintana/home';
 import { useAuth } from '@/context';
 import TextArea from "antd/lib/input/TextArea";
 import {API_URL} from "@/config/config";

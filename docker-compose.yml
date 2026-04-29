@@ -17,7 +17,7 @@ services:
       - my_custom_network
 
   frontend:
-    container_name: lumen_frontend
+    container_name: quintana_frontend
     image: node:lts-alpine
     working_dir: "/frontend"
     command: sh -c "yarn && yarn prod"

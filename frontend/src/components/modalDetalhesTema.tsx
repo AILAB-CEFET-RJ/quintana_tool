@@ -1,6 +1,6 @@
 import { Modal, Input, Button, message } from 'antd';
 import { useState } from 'react';
-import { Tema } from '@/pages/lumen/home';
+import { Tema } from '@/pages/quintana/home';
 import { useAuth } from '@/context';
 import {API_URL} from "@/config/config";
 

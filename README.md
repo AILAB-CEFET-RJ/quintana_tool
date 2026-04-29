@@ -1,7 +1,7 @@
 
-# Lumen
+# Quintana
 
-**Lumen** é uma ferramenta de avaliação automatizada de redações em língua portuguesa, baseada nas cinco competências do Exame Nacional do Ensino Médio (ENEM). Desenvolvida com foco educacional, permite a submissão de textos dissertativo-argumentativos por alunos e retorna, de forma automática, as notas preditas por competência e sugestões de melhoria.
+**Quintana** é uma ferramenta de avaliação automatizada de redações em língua portuguesa, baseada nas cinco competências do Exame Nacional do Ensino Médio (ENEM). Desenvolvida com foco educacional, permite a submissão de textos dissertativo-argumentativos por alunos e retorna, de forma automática, as notas preditas por competência e sugestões de melhoria.
 
 Este projeto visa demonstrar como técnicas modernas de Processamento de Linguagem Natural podem ser aplicadas para ampliar o acesso a ferramentas educacionais com retorno formativo, objetivo e explicável.
 
