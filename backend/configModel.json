@@ -1,0 +1,14 @@
+{
+    "comentario": "Só trocar o nome na linha do model abaixo.",
+    "model": "principal",
+    "available_models": [
+        {
+            "name": "principal",
+            "path": "model.pkl"
+        },
+        {
+            "name": "chekpoint_07_08",
+            "path": "checkpoint_07_08.pkl"
+        }
+    ]
+}

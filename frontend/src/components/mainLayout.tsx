@@ -11,7 +11,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-    const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth(); 
+    const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleLogout = () => {
@@ -21,7 +21,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             nomeUsuario: '',
         });
 
-        window.location.href = '/lumen/login';
+        window.location.href = '/quintana/login';
     }
 
     const items = isLoggedIn
@@ -33,16 +33,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             {
                 key: '2',
                 label: (
-                <span onClick={handleLogout} style={{ cursor: 'pointer', color: '#1677ff' }}>
-                    Sair
-                </span>
+                    <span onClick={handleLogout} style={{ cursor: 'pointer', color: '#1677ff' }}>
+                        Sair
+                    </span>
                 ),
             },
-            ]
+        ]
         : [
             {
                 key: '1',
-                label: <Link href="/lumen/login">Entrar</Link>,
+                label: <Link href="/quintana/login">Entrar</Link>,
             },
         ];
 
@@ -64,8 +64,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     defaultSelectedKeys={['2']}
                 >
                     <Menu.Item>
-                        <Link href="/lumen">
-                            Lumen
+                        <Link href="/quintana">
+                            Quintana
                         </Link>
                     </Menu.Item>
                     {isLoggedIn === false ? (
@@ -78,18 +78,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                         </Tooltip>
                     ) : (
                         <Menu.Item>
-                            <Link href="/lumen/home">
+                            <Link href="/quintana/home">
                                 Home
                             </Link>
                         </Menu.Item>
                     )}
                     <Menu.Item>
-                        <Link href="/lumen/competencias">
+                        <Link href="/quintana/competencias">
                             Competências
                         </Link>
                     </Menu.Item>
                     <Menu.Item>
-                        <Link href="/lumen/sobre">
+                        <Link href="/quintana/sobre">
                             Sobre
                         </Link>
                     </Menu.Item>

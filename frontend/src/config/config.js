@@ -1,3 +1,3 @@
 export const API_URL = 'http://localhost:5000';
-//export const API_URL = 'http://aquarii.eic.cefet-rj.br/lumen-api'
+//export const API_URL = 'http://aquarii.eic.cefet-rj.br/quintana-api'
 
