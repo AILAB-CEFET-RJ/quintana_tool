@@ -21,7 +21,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             nomeUsuario: '',
         });
 
-        window.location.href = '/lumen/login';
+        window.location.href = '/quintana/login';
     }
 
     const items = isLoggedIn
@@ -42,7 +42,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         : [
             {
                 key: '1',
-                label: <Link href="/lumen/login">Entrar</Link>,
+                label: <Link href="/quintana/login">Entrar</Link>,
             },
         ];
 
@@ -64,7 +64,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     defaultSelectedKeys={['2']}
                 >
                     <Menu.Item>
-                        <Link href="/lumen">
+                        <Link href="/quintana">
                             Quintana
                         </Link>
                     </Menu.Item>
@@ -78,18 +78,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                         </Tooltip>
                     ) : (
                         <Menu.Item>
-                            <Link href="/lumen/home">
+                            <Link href="/quintana/home">
                                 Home
                             </Link>
                         </Menu.Item>
                     )}
                     <Menu.Item>
-                        <Link href="/lumen/competencias">
+                        <Link href="/quintana/competencias">
                             Competências
                         </Link>
                     </Menu.Item>
                     <Menu.Item>
-                        <Link href="/lumen/sobre">
+                        <Link href="/quintana/sobre">
                             Sobre
                         </Link>
                     </Menu.Item>

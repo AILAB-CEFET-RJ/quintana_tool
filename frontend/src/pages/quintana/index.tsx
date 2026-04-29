@@ -1,13 +1,13 @@
 import { S } from '@/styles/Home.styles'
 import Image from 'next/image'
-import LumenLogo from '../../../public/quintana-logo.png'
+import QuintanaLogo from '../../../public/quintana-logo.png'
 
 const Index = () => {
   return (
     <S.ContentWrapper>
       <title>Quintana</title>
       <S.ImageContainer className='ImageContainer'>
-        <Image src={LumenLogo} alt='logo' fill style={{ objectFit: 'cover' }} />
+        <Image src={QuintanaLogo} alt='logo' fill style={{ objectFit: 'cover' }} />
       </S.ImageContainer>
       <S.TextWrapper>
         <S.Title>Quintana</S.Title>

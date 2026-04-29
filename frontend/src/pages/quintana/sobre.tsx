@@ -41,7 +41,7 @@ const Sobre = () => {
             <p>
               Seu código-fonte é aberto e pode ser encontrado neste repositório GitHub:&nbsp;
               <a
-                href="https://github.com/AILAB-CEFET-RJ/lumen_tool"
+                href="https://github.com/AILAB-CEFET-RJ/quintana_tool"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: '#1a73e8' }}
