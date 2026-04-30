@@ -1,10 +1,17 @@
-import { Modal, Input, Button, message, Collapse } from 'antd';
+import { Modal, Input, Button, message, Collapse, Row, Col, Card, Statistic, Tabs } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { Redacao, Tema } from '@/pages/quintana/home';
 import { useAuth } from '@/context';
 import TextArea from "antd/lib/input/TextArea";
 import { API_URL } from "@/config/config";
 import ReactMarkdown from 'react-markdown';
+import CompetencyRadar from './studentInsights/CompetencyRadar';
+import StudyPriorityCard from './studentInsights/StudyPriorityCard';
+import CompetencyFeedbackMap from './studentInsights/CompetencyFeedbackMap';
+import RewriteChecklist from './studentInsights/RewriteChecklist';
+import VersionComparison from './studentInsights/VersionComparison';
+import router from 'next/router';
 
 
 interface RedacaoDetalhes {
@@ -22,6 +29,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
     const [notaComp4Editada, setnotaComp4Editada] = useState<string>('');
     const [notaComp5Editada, setnotaComp5Editada] = useState<string>('');
     const [feedbackProfessorEditada, setFeedbackProfessorEditada] = useState<string>('');
+    const [versions, setVersions] = useState<Redacao[]>([]);
     const { tipoUsuario } = useAuth();
 
 
@@ -33,6 +41,27 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
         setnotaComp5Editada(`${redacao?.nota_competencia_5_professor ?? ''}`)
         setFeedbackProfessorEditada(redacao?.feedback_professor ?? '')
     }, [redacao])
+
+    useEffect(() => {
+        const fetchVersions = async () => {
+            if (!redacao?._id || !open || tipoUsuario !== 'aluno') {
+                setVersions([]);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/redacoes/${redacao._id}/versions`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setVersions(data);
+                }
+            } catch (error) {
+                console.error('Erro ao buscar versões da redação:', error);
+            }
+        };
+
+        fetchVersions();
+    }, [redacao, open, tipoUsuario])
 
 
     const { Panel } = Collapse;
@@ -90,6 +119,26 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
         marginBottom: '10px',
     }
 
+    const renderFeedback = () => (
+        <div style={{ ...inputStyle, overflowY: 'auto', maxHeight: '420px' }}>
+            <ReactMarkdown>
+                {(redacao?.feedback_llm || '')
+                    .split('\n')
+                    .map((linha) => linha.replace(/^\s{8}/, '').replace(/^\s{4}/, ''))
+                    .join('\n')
+                    .replace(/\\n/g, '\n')
+                    .trim()
+                }
+            </ReactMarkdown>
+        </div>
+    )
+
+    const handleRewrite = () => {
+        if (!redacao) return;
+        onCancel();
+        router.push(`/quintana/redacao?id=${redacao.id_tema}&rewriteOf=${redacao._id}`);
+    }
+
     return (
         <Modal
             title={tipoUsuario === 'aluno' ? 'Detalhes da redacao' : 'Editar redação'}
@@ -102,67 +151,111 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
 
             {redacao && tipoUsuario === 'aluno' ? (
                 <div>
-                    <label style={labelStyle}><b>Título</b>:</label>
-                    <Input style={inputStyle} value={redacao.titulo} disabled />
-                    <label style={labelStyle}><b>Texto</b>:</label>
-                    <TextArea rows={20} style={inputStyle} value={redacao.texto}
-                        disabled />
-                    <Collapse style={labelStyle}>
-                        <Panel header="Notas competências - Professor" key="1">
-                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal</b></label>
-                            <Input style={inputStyle} value={notaComp1Editada} disabled
-                            />
-                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
-                            <Input style={inputStyle} value={notaComp2Editada} disabled
-                            />
-                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
-                            <Input style={inputStyle} value={notaComp3Editada} disabled
-                            />
-                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
-                            <Input style={inputStyle} value={notaComp4Editada} disabled
-                            />
-                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
-                            <Input style={inputStyle} value={notaComp5Editada} disabled
-                            />
-                        </Panel>
-                        <Panel header="Feedbacks - Professor" key="2">
-                            <TextArea rows={20} style={inputStyle} value={feedbackProfessorEditada}
-                                disabled />
-                        </Panel>
-                        <Panel header="Notas competências - Modelo" key="3">
-                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal </b></label>
-                            <Input style={inputStyle} value={redacao.nota_competencia_1_model}
-                                disabled />
-                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
-                            <Input style={inputStyle} value={redacao.nota_competencia_2_model}
-                                disabled />
-                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
-                            <Input style={inputStyle} value={redacao.nota_competencia_3_model}
-                                disabled />
-                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
-                            <Input style={inputStyle} value={redacao.nota_competencia_4_model}
-                                disabled />
-                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
-                            <Input style={inputStyle} value={redacao.nota_competencia_5_model}
-                                disabled />
-                        </Panel>
-                        <Panel header="Feedbacks" key="4">
-                            <div style={{ ...inputStyle, overflowY: 'auto', maxHeight: '400px' }}>
-                                <ReactMarkdown>
-                                    {(redacao?.feedback_llm || '')
-                                        .split('\n')
-                                        .map((linha) => linha.replace(/^\s{8}/, '').replace(/^\s{4}/, ''))
-                                        .join('\n')
-                                        .replace(/\\n/g, '\n')
-                                        .trim()
-                                    }
-                                </ReactMarkdown>
+                    <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                        <Col xs={24} md={12}>
+                            <Card size="small" title="Redação" style={{ height: '100%' }}>
+                                <strong>{redacao.titulo?.trim() || 'Sem título'}</strong>
+                                <p style={{ margin: '6px 0 0', color: '#6b7280' }}>
+                                    {redacao.aluno} · Versão {redacao.version_number || 1}
+                                </p>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card size="small">
+                                <Statistic title="Nota total" value={Math.round(Number(redacao.nota_total) || 0)} suffix="/1000" />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card size="small">
+                                <Statistic title="Professor" value={redacao.nota_professor ? Math.round(Number(redacao.nota_professor)) : '-'} />
+                            </Card>
+                        </Col>
+                    </Row>
 
-                            </div>
-                        </Panel>
-                    </Collapse>
+                    <Tabs
+                        defaultActiveKey="resumo"
+                        items={[
+                            {
+                                key: 'resumo',
+                                label: 'Resumo',
+                                children: (
+                                    <>
+                                        <CompetencyRadar redacao={redacao} />
+                                        <StudyPriorityCard redacao={redacao} />
+                                    </>
+                                )
+                            },
+                            {
+                                key: 'texto',
+                                label: 'Texto',
+                                children: <TextArea rows={20} style={inputStyle} value={redacao.texto} disabled />
+                            },
+                            {
+                                key: 'notas',
+                                label: 'Notas',
+                                children: (
+                                    <Collapse style={labelStyle} defaultActiveKey={['modelo']}>
+                                        <Panel header="Notas competências - Modelo" key="modelo">
+                                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal </b></label>
+                                            <Input style={inputStyle} value={redacao.nota_competencia_1_model} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                                            <Input style={inputStyle} value={redacao.nota_competencia_2_model} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                                            <Input style={inputStyle} value={redacao.nota_competencia_3_model} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                                            <Input style={inputStyle} value={redacao.nota_competencia_4_model} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                                            <Input style={inputStyle} value={redacao.nota_competencia_5_model} disabled />
+                                        </Panel>
+                                        <Panel header="Notas competências - Professor" key="professor">
+                                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal</b></label>
+                                            <Input style={inputStyle} value={notaComp1Editada} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                                            <Input style={inputStyle} value={notaComp2Editada} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                                            <Input style={inputStyle} value={notaComp3Editada} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                                            <Input style={inputStyle} value={notaComp4Editada} disabled />
+                                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                                            <Input style={inputStyle} value={notaComp5Editada} disabled />
+                                        </Panel>
+                                    </Collapse>
+                                )
+                            },
+                            {
+                                key: 'plano',
+                                label: 'Plano de ação',
+                                children: (
+                                    <div style={{ display: 'grid', gap: 16 }}>
+                                        <CompetencyFeedbackMap redacao={redacao} />
+                                        <RewriteChecklist redacao={redacao} />
+                                    </div>
+                                )
+                            },
+                            {
+                                key: 'versoes',
+                                label: 'Versões',
+                                children: <VersionComparison versions={versions} />
+                            },
+                            {
+                                key: 'feedback',
+                                label: 'Feedback',
+                                children: (
+                                    <Collapse defaultActiveKey={['llm']}>
+                                        <Panel header="Feedback do modelo" key="llm">{renderFeedback()}</Panel>
+                                        <Panel header="Feedback do professor" key="professor">
+                                            <TextArea rows={14} style={inputStyle} value={feedbackProfessorEditada} disabled />
+                                        </Panel>
+                                    </Collapse>
+                                )
+                            }
+                        ]}
+                    />
 
-                    <Button style={{ marginTop: '1vw' }} onClick={onCancel}>OK</Button>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+                        <Button onClick={onCancel}>OK</Button>
+                        <Button type="primary" icon={<EditOutlined />} onClick={handleRewrite}>Reescrever</Button>
+                    </div>
                 </div>
             ) : redacao && ( //tipo professor
                 <div>

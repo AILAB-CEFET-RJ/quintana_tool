@@ -3,6 +3,9 @@ import { Form, Input, Button, message } from 'antd';
 import { useAuth } from '@/context';
 import router from 'next/router';
 import {API_URL} from "@/config/config";
+import PageShell from '@/components/ui/PageShell';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionPanel from '@/components/ui/SectionPanel';
 
 const Tema = () => {
     const [salvarDesabilitado, setSalvarDesabilitado] = useState(true);
@@ -42,26 +45,29 @@ const Tema = () => {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-            <div style={{ width: '400px' }}>
-                <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Criar Novo Tema</h1>
+        <PageShell maxWidth={720}>
+            <PageHeader
+                title="Criar novo tema"
+                description="Cadastre a proposta que ficará disponível para os estudantes enviarem redações."
+            />
+            <SectionPanel>
                 <Form form={form} onFinish={handleCadastroTema} onValuesChange={handleFormChange}>
                     <Form.Item name="nomeTema" label="Nome do Tema" rules={[{ required: true, message: 'Por favor, insira o nome do tema!' }]}>
-                        <Input />
+                        <Input size="large" />
                     </Form.Item>
                     <Form.Item name="descricaoTema" label="Descrição do Tema" rules={[{ required: true, message: 'Por favor, insira a descrição do tema!' }]}>
                         <Input.TextArea rows={12}/>
                     </Form.Item>
                     <Form.Item>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <Button type="primary" htmlType="submit" disabled={salvarDesabilitado}>
                                 Salvar
                             </Button>
                         </div>
                     </Form.Item>
                 </Form>
-            </div>
-        </div>
+            </SectionPanel>
+        </PageShell>
     );
 };
 

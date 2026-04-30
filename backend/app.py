@@ -4,10 +4,12 @@ from pymongo import MongoClient
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
 from llm import get_llm_feedback
+from pedagogy import build_structured_feedback
 from flask_cors import CORS
 import bcrypt
 import os
 from threading import Thread
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app) 
@@ -32,6 +34,7 @@ def post_model_response():
     essay = request.json['essay']
     id_theme = request.json['id']
     student = request.json['aluno']
+    rewrite_of = request.json.get('rewrite_of')
 
     lines = essay.split('\n')
     title = lines[0] if lines else "Título não fornecido"
@@ -49,6 +52,24 @@ def post_model_response():
 
     theme = database.get_tema(id_theme)
 
+    now = datetime.now(timezone.utc).isoformat()
+    parent_redacao = database.get_redacao_document(rewrite_of) if rewrite_of and ObjectId.is_valid(rewrite_of) else None
+    version_group_id = str(parent_redacao.get("version_group_id") or parent_redacao["_id"]) if parent_redacao else None
+    version_number = 1
+
+    if parent_redacao:
+        database.db.redacoes.update_one(
+            {"_id": parent_redacao["_id"]},
+            {"$set": {
+                "version_group_id": version_group_id,
+                "version_number": int(parent_redacao.get("version_number", 1))
+            }}
+        )
+        existing_versions = database.get_redacao_versions(str(parent_redacao["_id"]))
+        version_number = max([int(item.get("version_number", 1)) for item in existing_versions] or [1]) + 1
+
+    feedback_structured = build_structured_feedback(grades)
+
     essay_data = {
         "titulo": title,
         "texto": rest_of_essay.strip(),
@@ -62,21 +83,40 @@ def post_model_response():
         "id_tema": id_theme,
         "aluno": student,
         "feedback_llm": "",
-        "competencias": competencias
+        "competencias": competencias,
+        "created_at": now,
+        "updated_at": now,
+        "version_group_id": version_group_id,
+        "parent_redacao_id": rewrite_of if parent_redacao else None,
+        "version_number": version_number,
+        "feedback_structured": feedback_structured,
+        "rewrite_checklist_state": {}
     }
 
     essay_id = database.db.redacoes.insert_one(essay_data).inserted_id
 
     def gerar_feedback():
-        feedback = get_llm_feedback(essay, grades, theme)
-        database.db.redacoes.update_one(
-            {"_id": essay_id},
-            {"$set": {"feedback_llm": feedback}}
-        )
+        try:
+            feedback = get_llm_feedback(essay, grades, theme)
+            database.db.redacoes.update_one(
+                {"_id": essay_id},
+                {"$set": {
+                    "feedback_llm": feedback,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        except Exception as exc:
+            database.db.redacoes.update_one(
+                {"_id": essay_id},
+                {"$set": {
+                    "feedback_llm": f"Feedback textual indisponível no momento: {exc}",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
 
     Thread(target=gerar_feedback).start()
 
-    response = jsonify({"grades": grades})
+    response = jsonify({"grades": grades, "redacao_id": str(essay_id), "version_number": version_number})
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
@@ -103,6 +143,9 @@ def post_model_response_witht_ocr():
 
     feedback_llm = get_llm_feedback(essay, grades)
 
+    now = datetime.now(timezone.utc).isoformat()
+    feedback_structured = build_structured_feedback(grades)
+
     essay_data = {
         "titulo": "Redação de imagem",
         "texto": essay,
@@ -115,6 +158,13 @@ def post_model_response_witht_ocr():
         "id_tema": id_theme,
         "aluno": student,
         "feedback_llm": feedback_llm,
+        "created_at": now,
+        "updated_at": now,
+        "version_group_id": None,
+        "parent_redacao_id": None,
+        "version_number": 1,
+        "feedback_structured": feedback_structured,
+        "rewrite_checklist_state": {}
     }
 
     essays_collection = database.db.redacoes
@@ -241,6 +291,11 @@ def create_redacao():
 def get_redacao_by_id(id):
     redacao = database.get_redacao_by_id(id)
     return jsonify(redacao)
+
+@app.get("/redacoes/<id>/versions")
+def get_redacao_versions(id):
+    redacoes = database.get_redacao_versions(id)
+    return jsonify(redacoes)
 
 
 @app.put("/redacoes/<id>")

@@ -1,105 +1,111 @@
-import { useState } from 'react';
-import { Button, Checkbox, Input, Layout } from 'antd';
-import axios from 'axios';
-import router from 'next/router';
-import { API_URL } from "@/config/config";
-
-const { Content } = Layout;
+import { useState } from 'react'
+import { Button, Input, Radio, Typography } from 'antd'
+import { LockOutlined, MailOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
+import axios from 'axios'
+import router from 'next/router'
+import { API_URL } from "@/config/config"
+import ErrorAlert from '../../components/errorAlert'
+import AuthShell from '@/components/ui/AuthShell'
 
 const Cadastro = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [nomeUsuario, setNomeUsuario] = useState('');
-    const [isProfessor, setIsProfessor] = useState(false);
-    const [isAluno, setIsAluno] = useState(false);
-    const [tipoUsuario, setTipoUsuario] = useState('');
-
-
-    const handleCheckboxChange = (type: string) => {
-        console.log('type', type)
-        if (type === 'professor') {
-            setIsProfessor(!isProfessor);
-            setIsAluno(false);
-            setTipoUsuario(type);
-        } else if (type === 'aluno') {
-            setIsAluno(!isAluno);
-            setIsProfessor(false);
-            setTipoUsuario(type);
-        }
-    };
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [nomeUsuario, setNomeUsuario] = useState('')
+    const [tipoUsuario, setTipoUsuario] = useState('')
+    const [errorMessage, setErrorMessage] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleCadastro = async () => {
+        setErrorMessage('')
+
+        if (!tipoUsuario) {
+            setErrorMessage('Selecione se o usuário é professor ou aluno.')
+            return
+        }
+
+        if (!email || !password || !nomeUsuario) {
+            setErrorMessage('Preencha email, nome de usuário e senha.')
+            return
+        }
+
         try {
+            setIsSubmitting(true)
             await axios.post(`${API_URL}/userRegister`, {
                 email,
                 password,
                 nomeUsuario,
                 tipoUsuario
-            });
-            console.log('Usuário cadastrado com sucesso!');
-            setEmail('');
-            setPassword('');
-            setTipoUsuario('');
-            setNomeUsuario('');
-            router.push('/quintana/login');
+            })
+            setEmail('')
+            setPassword('')
+            setTipoUsuario('')
+            setNomeUsuario('')
+            router.push('/quintana/login')
         } catch (error) {
-            console.error('Erro ao cadastrar usuário:', error);
+            console.error('Erro ao cadastrar usuário:', error)
+            if (axios.isAxiosError(error) && !error.response) {
+                setErrorMessage('Não foi possível conectar ao backend em http://localhost:5000.')
+            } else {
+                setErrorMessage('Erro ao cadastrar usuário. Verifique os dados e tente novamente.')
+            }
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    const isDisabled = !isProfessor && !isAluno;
-
     return (
-        <Layout style={{ minHeight: '50vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <Content style={{ padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', width: '300px' }}>
-                <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                    <h2>Cadastro</h2>
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                    <Checkbox
-                        style={{ marginLeft: '50px' }}
-                        checked={isProfessor}
-                        onChange={() => handleCheckboxChange('professor')}
-                    >
-                        Professor
-                    </Checkbox>
-                    <Checkbox
-                        checked={isAluno}
-                        onChange={() => handleCheckboxChange('aluno')}
-                    >
-                        Aluno
-                    </Checkbox>
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                    <Input
-                        placeholder="Email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        disabled={isDisabled}
-                    />
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                    <Input
-                        placeholder="Nome de usuário"
-                        value={nomeUsuario}
-                        onChange={e => setNomeUsuario(e.target.value)}
-                        disabled={isDisabled}
-                    />
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                    <Input.Password
-                        placeholder="Senha"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        disabled={isDisabled}
-                    />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                    <Button onClick={handleCadastro} type="primary">Entrar</Button>
-                </div>
-            </Content>
-        </Layout>
-    );
-};
+        <AuthShell
+            title="Criar conta"
+            subtitle="Escolha seu perfil para acessar a experiência adequada."
+        >
+            <div style={{ display: 'grid', gap: 14 }}>
+                <Radio.Group
+                    value={tipoUsuario}
+                    onChange={(event) => setTipoUsuario(event.target.value)}
+                    optionType="button"
+                    buttonStyle="solid"
+                    size="large"
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}
+                >
+                    <Radio.Button value="aluno" style={{ textAlign: 'center' }}>
+                        <UserOutlined /> Aluno
+                    </Radio.Button>
+                    <Radio.Button value="professor" style={{ textAlign: 'center' }}>
+                        <TeamOutlined /> Professor
+                    </Radio.Button>
+                </Radio.Group>
+                <Input
+                    size="large"
+                    prefix={<MailOutlined />}
+                    placeholder="Email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                />
+                <Input
+                    size="large"
+                    prefix={<UserOutlined />}
+                    placeholder="Nome de usuário"
+                    value={nomeUsuario}
+                    onChange={e => setNomeUsuario(e.target.value)}
+                />
+                <Input.Password
+                    size="large"
+                    prefix={<LockOutlined />}
+                    placeholder="Senha"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onPressEnter={handleCadastro}
+                />
+                {errorMessage && <ErrorAlert message={errorMessage} />}
+                <Button type="primary" size="large" block onClick={handleCadastro} loading={isSubmitting}>
+                    Criar conta
+                </Button>
+                <Typography.Text style={{ textAlign: 'center', color: '#6b7280' }}>
+                    Já possui conta? <a onClick={() => router.push('/quintana/login')}>Entrar</a>.
+                </Typography.Text>
+            </div>
+        </AuthShell>
+    )
+}
 
-export default Cadastro;
+export default Cadastro

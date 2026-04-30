@@ -1,89 +1,50 @@
-import { useEffect, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import rehypeRaw from 'rehype-raw'
+import PageHeader from '@/components/ui/PageHeader'
+import PageShell from '@/components/ui/PageShell'
+import SectionPanel from '@/components/ui/SectionPanel'
+import { COMPETENCIES } from '@/lib/competencias'
 
 const Competencias = () => {
-  const [content, setContent] = useState('')
-
   return (
-    <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <div style={{maxWidth: '50%', padding: '16px'}}>
-            <div>
-                <title>Competências da redação do Enem</title>
-                <h1>Competências da redação do Enem</h1>
-                <p>Veja abaixo quais são as cinco competências da redação do Enem:</p>
-                <ul>
-                    <li><b>Competência 1</b>: Demonstrar domínio da modalidade escrita formal da língua portuguesa</li>
-                    <li><b>Competência 2</b>: Compreender a proposta de redação e aplicar conceitos das várias áreas de
-                        conhecimento para desenvolver o tema, dentro dos limites estruturais do texto
-                        dissertativo-argumentativo em prosa.
-                    </li>
-                    <li><b>Competência 3</b>: Selecionar, relacionar, organizar e interpretar informações, fatos,
-                        opiniões e
-                        argumentos em defesa de um ponto de vista.
-                    </li>
-                    <li><b>Competência 4</b>: Demonstrar conhecimento dos mecanismos linguísticos necessários para a
-                        construção
-                        da argumentação.
-                    </li>
-                    <li><b>Competência 5</b>: Elaborar proposta de intervenção para o problema abordado, respeitando os
-                        direitos
-                        humanos.
-                    </li>
-                </ul>
-
-                <h2>Entenda as 5 competências da redação do Enem</h2>
-                <p>Ao entender as cinco competências da redação do Enem, o estudante chegará preparado para cumprir os
-                    critérios que serão observados no seu texto. Confira abaixo alguns detalhes importantes sobre as
-                    competências:</p>
-
-                <h3>Competência 1 da redação do Enem</h3>
-                <p>A Competência 1 da redação do Enem é um critério que analisa se o participante possui escrita formal
-                    da
-                    língua portuguesa, usando as regras gramaticais e a construção sintática de forma adequada. Essa
-                    competência também verifica se ele adota as regras de ortografia e de acentuação gráfica em
-                    conformidade com o atual Acordo Ortográfico.</p>
-                <p><a
-                    href="https://vestibular.brasilescola.uol.com.br/enem/competencia-1-redacao-enem-os-erros-mais-comuns.htm">Leia
-                    mais sobre a competência 1 e veja os erros mais comuns</a></p>
-
-                <h3>Competência 2 da redação do Enem</h3>
-                <p>A Competência 2 da redação do Enem avalia se o estudante seguiu o formativo
-                    dissertativo-argumentativo.
-                    Outro aspecto analisado é a presença de repertório sociocultural, que é uma informação, um fato, uma
-                    citação ou uma experiência vivida que, de alguma forma, contribui como argumento para a discussão
-                    proposta.</p>
-                <p><a href="https://brasilescola.uol.com.br/redacao/competencia-2-redacao-enem.htm">Veja mais detalhes
-                    sobre a competência 2</a></p>
-
-                <h3>Competência 3 da redação do Enem</h3>
-                <p>A Competência 3 da redação do Enem analisa se o inscrito elaborou um texto que possui coerência e da
-                    plausibilidade entre as ideias apresentadas e se atende o projeto de redação (planejamento prévio à
-                    escrita) que deve ser produzida.</p>
-                <p><a href="https://brasilescola.uol.com.br/redacao/competencia-3-da-redacao-do-enem.htm">Saiba mais
-                    sobre a competência 3</a></p>
-
-                <h3>Competência 4 da redação do Enem</h3>
-                <p>A Competência 4 da redação do Enem é um critério que analisa se o estudante produziu o texto com uma
-                    estruturação lógica e formal. Sendo assim, as frases e os parágrafos devem estar interligados,
-                    apresentando as ideias de forma coerente.</p>
-                <p><a href="https://brasilescola.uol.com.br/redacao/competencia-3-da-redacao-do-enem.htm">Confira como
-                    funciona a competência 4</a></p>
-
-                <h3>Competência 5 da redação do Enem</h3>
-                <p>Na Competência 5 da redação do Enem, é avaliado se participante apresentou uma proposta de
-                    intervenção,
-                    ou seja, uma iniciativa que busque enfrentar o problema exposto. Conforme a cartilha de redação, é a
-                    ocasião para que o estudante demonstre seu preparo para exercitar a cidadania e atuar na realidade,
-                    em
-                    consonância com os direitos humanos.</p>
+    <PageShell maxWidth={980}>
+      <PageHeader
+        title="Competências da redação do ENEM"
+        description="As cinco competências organizam a correção como um conjunto de habilidades, não apenas como uma nota total."
+      />
+      <div style={{ display: 'grid', gap: 14 }}>
+        {COMPETENCIES.map((competency, index) => (
+          <SectionPanel key={competency.code}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                background: '#e6f4ff',
+                color: '#0958d9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                flex: '0 0 auto'
+              }}>
+                {competency.code}
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 19 }}>{competency.title}</h2>
+                <p style={{ margin: '8px 0 0', color: '#4b5563', lineHeight: 1.65 }}>
+                  {[
+                    'Avalia domínio da escrita formal, incluindo gramática, pontuação, ortografia e precisão vocabular.',
+                    'Avalia compreensão da proposta, manutenção do tema e uso produtivo de repertório sociocultural.',
+                    'Avalia a capacidade de selecionar, organizar e desenvolver argumentos em defesa de um ponto de vista.',
+                    'Avalia coesão textual, encadeamento lógico e uso de recursos linguísticos para conectar ideias.',
+                    'Avalia a proposta de intervenção, considerando agente, ação, meio, finalidade e detalhamento.'
+                  ][index]}
+                </p>
+              </div>
             </div>
-            <p>Fonte:
-                https://vestibular.brasilescola.uol.com.br/enem/enem-2023-entenda-as-5-competencias-da-redacao/355070.html</p>
-        </div>
-
-
-    </div>
+          </SectionPanel>
+        ))}
+      </div>
+    </PageShell>
   )
 }
 

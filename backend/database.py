@@ -88,6 +88,38 @@ def get_redacao_by_id(id):
     redacao['_id'] = str(redacao['_id'])
     return redacao
 
+def get_redacao_document(id):
+    redacoes_collection = db.redacoes
+    return redacoes_collection.find_one({"_id": ObjectId(id)})
+
+def serialize_redacao(redacao):
+    redacao['_id'] = str(redacao['_id'])
+    return redacao
+
+def get_redacao_versions(id):
+    redacoes_collection = db.redacoes
+    redacao = redacoes_collection.find_one({"_id": ObjectId(id)})
+
+    if not redacao:
+        return []
+
+    redacao_id = str(redacao['_id'])
+    version_group_id = redacao.get("version_group_id") or redacao_id
+
+    redacoes = list(redacoes_collection.find({
+        "$or": [
+            {"version_group_id": version_group_id},
+            {"_id": ObjectId(version_group_id) if ObjectId.is_valid(version_group_id) else ObjectId(id)}
+        ]
+    }))
+
+    for item in redacoes:
+        if "version_number" not in item:
+            item["version_number"] = 1
+        serialize_redacao(item)
+
+    return sorted(redacoes, key=lambda item: (item.get("version_number", 1), item.get("created_at", "")))
+
 def update_redacao(id, data):
     redacoes_collection = db.redacoes
     object_id = ObjectId(id)

@@ -16,7 +16,7 @@ const Redacao = () => {
   const [essayGrade, setEssayGrade] = useState<object>({ key: 'value' })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const router = useRouter();
-  const { id } = router.query;
+  const { id, rewriteOf } = router.query;
   const { nomeUsuario } = useAuth();
   const { Panel } = Collapse;
 
@@ -47,7 +47,8 @@ const Redacao = () => {
     const response = await axios.post(`${API_URL}/model`, {
       essay: essay,
       id: id,
-      aluno: nomeUsuario
+      aluno: nomeUsuario,
+      rewrite_of: rewriteOf || null
     })
 
     const data = response.data
@@ -76,6 +77,7 @@ const Redacao = () => {
     formData.append('image', selectedFile)
     formData.append('id', id ? id.toString() : '')
     formData.append('aluno', nomeUsuario)
+    formData.append('rewrite_of', rewriteOf ? rewriteOf.toString() : '')
 
     try {
       const response = await axios.post(`${API_URL}/model2`, formData, {
@@ -121,6 +123,11 @@ const Redacao = () => {
   return (
     <S.Wrapper>
       <S.Title>🧾 Redação 🧾</S.Title>
+      {rewriteOf && (
+        <p style={{ color: '#6b7280', marginTop: -8 }}>
+          Reescrita de uma redação anterior
+        </p>
+      )}
 
       <Collapse style={labelStyle}>
         <Panel header="Tema" key="1">

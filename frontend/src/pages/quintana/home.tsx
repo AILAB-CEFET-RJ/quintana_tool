@@ -1,12 +1,17 @@
-import { Tabs, Button, Modal, Tooltip, message, Select, Space } from 'antd';
+import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic } from 'antd';
 import { useState, useEffect } from 'react';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useAuth } from '../../context';
 import CustomTable from '../../components/customTable';
 import ModalDetalhesTema from '@/components/modalDetalhesTema';
 import ModalDetalhesRedacao from "@/components/modalDetalhesRedacao";
 import { API_URL } from "@/config/config";
+import ProgressTimeline from '@/components/studentInsights/ProgressTimeline';
+import PageShell from '@/components/ui/PageShell';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionPanel from '@/components/ui/SectionPanel';
+import { getCompetencyScores } from '@/lib/competencias';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -39,6 +44,13 @@ export interface Redacao {
     comentarios: string;
     feedback_llm: string;
     feedback_professor: string;
+    created_at?: string;
+    updated_at?: string;
+    version_group_id?: string | null;
+    parent_redacao_id?: string | null;
+    version_number?: number;
+    feedback_structured?: any;
+    rewrite_checklist_state?: Record<string, boolean>;
 }
 
 const Home = () => {
@@ -229,8 +241,48 @@ const Home = () => {
         { title: 'Nota Professor', dataIndex: 'nota_professor', key: 'nota_professor', align: 'center', ellipsis: true },
     ];
 
+    const visibleRedacoes = handleFilterRedacoes();
+    const latestRedacao = [...visibleRedacoes].sort((a, b) => {
+        const aDate = a.created_at ? new Date(a.created_at).getTime() : parseInt(`${a._id || '00000000'}`.slice(0, 8), 16) * 1000;
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : parseInt(`${b._id || '00000000'}`.slice(0, 8), 16) * 1000;
+        return bDate - aDate;
+    })[0];
+    const priority = latestRedacao ? getCompetencyScores(latestRedacao).sort((a, b) => a.score - b.score)[0] : null;
+    const pageTitle = tipoUsuario === 'professor' ? 'Painel do professor' : 'Minhas redações';
+    const pageDescription = tipoUsuario === 'professor'
+        ? 'Acompanhe temas, submissões e correções dos estudantes.'
+        : 'Acompanhe seus textos, visualize progresso e identifique prioridades de estudo.';
+
     return (
-        <div style={{ padding: '0 20px 0 20px', width: '100vw' }}>
+        <PageShell>
+            <PageHeader title={pageTitle} description={pageDescription} />
+
+            {isLoggedIn && (
+                <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                    <Col xs={24} sm={12} lg={6}>
+                        <Card bordered={false} style={{ borderRadius: 8 }}>
+                            <Statistic title="Redações" value={visibleRedacoes.length} prefix={<FileTextOutlined />} />
+                        </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <Card bordered={false} style={{ borderRadius: 8 }}>
+                            <Statistic title="Temas disponíveis" value={tipoUsuario === 'professor' ? handleFilterTemas().length : temasData.length} prefix={<ReadOutlined />} />
+                        </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <Card bordered={false} style={{ borderRadius: 8 }}>
+                            <Statistic title="Última nota" value={latestRedacao ? Math.round(Number(latestRedacao.nota_total) || 0) : 0} prefix={<TrophyOutlined />} />
+                        </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <Card bordered={false} style={{ borderRadius: 8 }}>
+                            <Statistic title={tipoUsuario === 'professor' ? 'Alunos listados' : 'Prioridade atual'} value={tipoUsuario === 'professor' ? alunos.length : priority?.code || '-'} prefix={<UserOutlined />} />
+                        </Card>
+                    </Col>
+                </Row>
+            )}
+
+            <SectionPanel>
             <Tabs activeKey={activeKey} onChange={handleTabChange} style={{ flex: 1 }}>
                 <TabPane tab="Temas" key="1">
                     <Space style={{ marginBottom: 16 }}>
@@ -255,7 +307,7 @@ const Home = () => {
                         />
                     }
                 </TabPane>
-                <TabPane tab="Redações" key="2">
+                <TabPane tab={tipoUsuario === 'professor' ? 'Redações recebidas' : 'Minhas redações'} key="2">
                     <Space style={{ marginBottom: 16 }}>
                         {tipoUsuario === 'professor' && (
                             <Select defaultValue="todos" style={{ width: 200 }} onChange={value => setFilter(value)}>
@@ -274,14 +326,18 @@ const Home = () => {
                             </Select>
                         )}
                     </Space>
+                    {isLoggedIn && tipoUsuario === 'aluno' && (
+                        <ProgressTimeline redacoes={visibleRedacoes} />
+                    )}
                     {isLoggedIn &&
                         <CustomTable
-                            dataSource={handleFilterRedacoes()}
+                            dataSource={visibleRedacoes}
                             columns={redacaoColumns}
                         />
                     }
                 </TabPane>
             </Tabs>
+            </SectionPanel>
 
             <ModalDetalhesTema
                 open={modalVisible}
@@ -297,7 +353,7 @@ const Home = () => {
                 onRedacaoEditado={handleRedacaoEditado}
             />
 
-        </div>
+        </PageShell>
     );
 };
 

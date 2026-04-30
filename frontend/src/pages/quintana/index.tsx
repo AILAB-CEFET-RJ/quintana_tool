@@ -1,25 +1,88 @@
-import { S } from '@/styles/Home.styles'
-import Image from 'next/image'
-import QuintanaLogo from '../../../public/quintana-logo.png'
+import { useEffect } from 'react'
+import type { CSSProperties } from 'react'
+import { Button } from 'antd'
+import { LoginOutlined, UserAddOutlined } from '@ant-design/icons'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { useAuth } from '@/context'
 
 const Index = () => {
+  const { isLoggedIn } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      router.replace('/quintana/home')
+    }
+  }, [isLoggedIn, router])
+
+  if (isLoggedIn) {
+    return null
+  }
+
   return (
-    <S.ContentWrapper>
-      <title>Quintana</title>
-      <S.ImageContainer className='ImageContainer'>
-        <Image src={QuintanaLogo} alt='logo' fill style={{ objectFit: 'cover' }} />
-      </S.ImageContainer>
-      <S.TextWrapper>
-        <S.Title>Quintana</S.Title>
-        <S.Divider />
-        <S.Description>
-          A escrita é uma das formas mais poderosas de expressar ideias, defender argumentos e mostrar domínio sobre um tema. Mas avaliar milhares de textos de forma justa, rápida e consistente é um desafio — especialmente em exames de grande escala, como o ENEM no Brasil.
-          Pensando nisso, o Quintana foi criado: uma ferramenta de avaliação automatizada de redações, desenvolvida com inteligência artificial e treinada para entender as competências exigidas em textos dissertativos-argumentativos. Assim como corretores humanos, o Quintana analisa a estrutura, a argumentação, a gramática e até a proposta de intervenção — e devolve não apenas uma nota por competência, mas também sugestões práticas para melhorar a escrita.
-          Seja você estudante, professor ou gestor educacional, o Quintana é seu aliado para tornar o processo de avaliação mais ágil, transparente e formativo.
-        </S.Description>
-      </S.TextWrapper>
-    </S.ContentWrapper>
+    <main style={styles.hero}>
+      <section style={styles.content}>
+        <span style={styles.badge}>Quintana</span>
+        <h1 style={styles.title}>Avaliação de redações com devolutiva clara para o próximo texto</h1>
+        <p style={styles.description}>
+          Visualize competências, acompanhe evolução e transforme a correção em um plano de estudo.
+        </p>
+        <div style={styles.actions}>
+          <Link href="/quintana/login">
+            <Button type="primary" size="large" icon={<LoginOutlined />}>Entrar</Button>
+          </Link>
+          <Link href="/quintana/cadastro">
+            <Button size="large" icon={<UserAddOutlined />}>Criar conta</Button>
+          </Link>
+        </div>
+      </section>
+    </main>
   )
 }
 
-export default Index;
+const styles: Record<string, CSSProperties> = {
+  hero: {
+    minHeight: 'calc(100vh - 64px)',
+    backgroundImage: 'linear-gradient(90deg, rgba(15, 23, 42, 0.84), rgba(15, 23, 42, 0.45)), url("/bookPages.jpg")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '48px 8vw'
+  },
+  content: {
+    maxWidth: 720,
+    color: '#ffffff'
+  },
+  badge: {
+    display: 'inline-flex',
+    border: '1px solid rgba(255, 255, 255, 0.34)',
+    borderRadius: 999,
+    padding: '7px 13px',
+    marginBottom: 20,
+    background: 'rgba(255, 255, 255, 0.12)',
+    fontWeight: 700
+  },
+  title: {
+    margin: 0,
+    fontSize: 48,
+    lineHeight: 1.08,
+    letterSpacing: 0
+  },
+  description: {
+    margin: '18px 0 0',
+    color: '#e5e7eb',
+    fontSize: 18,
+    lineHeight: 1.65,
+    maxWidth: 620
+  },
+  actions: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+    marginTop: 28
+  }
+}
+
+export default Index

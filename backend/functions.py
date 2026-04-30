@@ -22,16 +22,16 @@ def get_model_config(name):
         raise ValueError(f"Modelo '{name}' não encontrado. Disponíveis: {[m['name'] for m in models]}")
     return model['path']
 
-# Configure sua chave de API da AZURE
-try:
-    load_dotenv()
+def get_computervision_client():
     subscription_key = os.getenv('SUBSCRIPTION_KEY')
     endpoint = os.getenv('ENDPOINT')
-    computervision_client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
-except:
-    subscription_key = os.environ('SUBSCRIPTION_KEY'),
-    endpoint = os.environ('ENDPOINT')
-    computervision_client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
+
+    if not subscription_key or not endpoint:
+        raise RuntimeError(
+            'SUBSCRIPTION_KEY e ENDPOINT precisam estar configurados para usar OCR.'
+        )
+
+    return ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
 
 
 def use_vectorizer(df_train):
@@ -71,6 +71,8 @@ def persist_essay(essay, grades):
         json.dump(obj, f, ensure_ascii=False, indent=4)
 
 def get_text(imagem):
+    computervision_client = get_computervision_client()
+
     # Leia imagem do arquivo
     local_image_handwritten = imagem.stream
 
