@@ -5,6 +5,7 @@ from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
 from llm import get_llm_feedback
 from pedagogy import build_structured_feedback
+from analytics import build_teacher_analytics
 from flask_cors import CORS
 import bcrypt
 import os
@@ -35,6 +36,8 @@ def post_model_response():
     id_theme = request.json['id']
     student = request.json['aluno']
     rewrite_of = request.json.get('rewrite_of')
+    class_id = request.json.get('class_id')
+    activity_id = request.json.get('activity_id')
 
     lines = essay.split('\n')
     title = lines[0] if lines else "Título não fornecido"
@@ -90,8 +93,19 @@ def post_model_response():
         "parent_redacao_id": rewrite_of if parent_redacao else None,
         "version_number": version_number,
         "feedback_structured": feedback_structured,
-        "rewrite_checklist_state": {}
+        "rewrite_checklist_state": {},
+        "class_id": class_id,
+        "activity_id": activity_id,
+        "submitted_at": now,
+        "correction_source": "model",
+        "is_latest_version": True
     }
+
+    if parent_redacao:
+        database.db.redacoes.update_many(
+            {"version_group_id": version_group_id},
+            {"$set": {"is_latest_version": False}}
+        )
 
     essay_id = database.db.redacoes.insert_one(essay_data).inserted_id
 
@@ -128,6 +142,8 @@ def post_model_response_witht_ocr():
     print('imagem', image)
     id_theme = request.form.get('id')
     student = request.form.get('aluno')
+    class_id = request.form.get('class_id')
+    activity_id = request.form.get('activity_id')
 
     essay = get_text(image)
 
@@ -164,7 +180,12 @@ def post_model_response_witht_ocr():
         "parent_redacao_id": None,
         "version_number": 1,
         "feedback_structured": feedback_structured,
-        "rewrite_checklist_state": {}
+        "rewrite_checklist_state": {},
+        "class_id": class_id,
+        "activity_id": activity_id,
+        "submitted_at": now,
+        "correction_source": "model",
+        "is_latest_version": True
     }
 
     essays_collection = database.db.redacoes
@@ -219,6 +240,14 @@ def get_alunos():
     response.headers.add('Access-Control-Allow-Origin', '*')
 
     return response
+
+
+@app.get("/professores/<nome_professor>/analytics")
+def get_professor_analytics(nome_professor):
+    class_id = request.args.get("class_id")
+    activity_id = request.args.get("activity_id")
+    analytics = build_teacher_analytics(nome_professor, class_id, activity_id)
+    return jsonify(analytics)
 
 
 @app.get("/temas")

@@ -1,4 +1,4 @@
-import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic } from 'antd';
+import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic, Spin, Alert } from 'antd';
 import { useState, useEffect } from 'react';
 import { PlusOutlined, DeleteOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import PageShell from '@/components/ui/PageShell';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionPanel from '@/components/ui/SectionPanel';
 import { getCompetencyScores } from '@/lib/competencias';
+import TeacherAnalyticsPanel from '@/components/teacherAnalytics/TeacherAnalyticsPanel';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -51,6 +52,11 @@ export interface Redacao {
     version_number?: number;
     feedback_structured?: any;
     rewrite_checklist_state?: Record<string, boolean>;
+    class_id?: string | null;
+    activity_id?: string | null;
+    submitted_at?: string;
+    correction_source?: string;
+    is_latest_version?: boolean;
 }
 
 const Home = () => {
@@ -64,6 +70,9 @@ const Home = () => {
     const [selectedRedacao, setSelectedRedacao] = useState<Redacao | null>(null);
     const [filter, setFilter] = useState<string>('todos');
     const [filterAluno, setFilterAluno] = useState<string>('todos');
+    const [teacherAnalytics, setTeacherAnalytics] = useState<any>(null);
+    const [analyticsLoading, setAnalyticsLoading] = useState(false);
+    const [analyticsError, setAnalyticsError] = useState('');
     const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth();
 
     const handleTabChange = (key: string) => {
@@ -126,6 +135,32 @@ const Home = () => {
 
         fetchAlunos();
     }, []);
+
+    useEffect(() => {
+        const fetchTeacherAnalytics = async () => {
+            if (tipoUsuario !== 'professor' || !nomeUsuario) {
+                return;
+            }
+
+            try {
+                setAnalyticsLoading(true);
+                setAnalyticsError('');
+                const response = await fetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics`);
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar análise da turma');
+                }
+                const data = await response.json();
+                setTeacherAnalytics(data);
+            } catch (error) {
+                console.error('Erro ao buscar análise da turma:', error);
+                setAnalyticsError('Não foi possível carregar a análise da turma.');
+            } finally {
+                setAnalyticsLoading(false);
+            }
+        };
+
+        fetchTeacherAnalytics();
+    }, [tipoUsuario, nomeUsuario, redacoesData.length, temasData.length]);
 
     const handleDeleteTema = async (id: string) => {
         try {
@@ -336,6 +371,19 @@ const Home = () => {
                         />
                     }
                 </TabPane>
+                {tipoUsuario === 'professor' && (
+                    <TabPane tab="Análise da turma" key="3">
+                        {analyticsLoading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
+                                <Spin />
+                            </div>
+                        ) : analyticsError ? (
+                            <Alert type="error" showIcon message={analyticsError} />
+                        ) : (
+                            <TeacherAnalyticsPanel data={teacherAnalytics} />
+                        )}
+                    </TabPane>
+                )}
             </Tabs>
             </SectionPanel>
 

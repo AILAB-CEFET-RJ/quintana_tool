@@ -16,7 +16,7 @@ const Redacao = () => {
   const [essayGrade, setEssayGrade] = useState<object>({ key: 'value' })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const router = useRouter();
-  const { id, rewriteOf } = router.query;
+  const { id, rewriteOf, classId, activityId } = router.query;
   const { nomeUsuario } = useAuth();
   const { Panel } = Collapse;
 
@@ -48,7 +48,9 @@ const Redacao = () => {
       essay: essay,
       id: id,
       aluno: nomeUsuario,
-      rewrite_of: rewriteOf || null
+      rewrite_of: rewriteOf || null,
+      class_id: classId || null,
+      activity_id: activityId || null
     })
 
     const data = response.data
@@ -78,6 +80,8 @@ const Redacao = () => {
     formData.append('id', id ? id.toString() : '')
     formData.append('aluno', nomeUsuario)
     formData.append('rewrite_of', rewriteOf ? rewriteOf.toString() : '')
+    formData.append('class_id', classId ? classId.toString() : '')
+    formData.append('activity_id', activityId ? activityId.toString() : '')
 
     try {
       const response = await axios.post(`${API_URL}/model2`, formData, {
