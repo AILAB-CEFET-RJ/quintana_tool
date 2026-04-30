@@ -28,6 +28,12 @@ Obs.: Certifique-se de que a porta do MongoDB está acessível e que o Docker es
 
 - Vídeo no YouTube: [https://youtu.be/RLO5hGGK63c](https://youtu.be/RLO5hGGK63c)
 
+## 📚 Documentação
+
+- [Instalação e execução](docs/instalacao-e-execucao.md)
+- [Funcionalidades para estudantes](docs/funcionalidades-estudante.md)
+- [Arquitetura das funcionalidades para estudantes](docs/arquitetura-funcionalidades-estudante.md)
+
 
 ## 📄 Licença
 
