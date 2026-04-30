@@ -20,7 +20,12 @@ Além dos campos já existentes de nota e texto, novas submissões passam a incl
     "priorities": [],
     "rewrite_checklist": []
   },
-  "rewrite_checklist_state": {}
+  "feedback_structured_source": "fallback",
+  "rewrite_checklist_state": {},
+  "class_id": "...",
+  "activity_id": "...",
+  "submitted_at": "2026-04-30T...",
+  "schema_version": 1
 }
 ```
 
@@ -31,7 +36,10 @@ Observações:
 - `parent_redacao_id` aponta para a versão usada como base da reescrita.
 - `version_number` indica a posição da redação na sequência de versões.
 - `feedback_structured` guarda a devolutiva navegável usada pelo frontend.
-- `rewrite_checklist_state` foi reservado para persistência futura do estado do checklist.
+- `feedback_structured_source` indica se a estrutura veio do LLM ou do fallback determinístico.
+- `rewrite_checklist_state` persiste o estado marcado do checklist.
+- `class_id` e `activity_id` vinculam a redação a uma turma e atividade, quando houver.
+- `schema_version` indica a versão do esquema lógico usado pela aplicação.
 
 ## Backend
 
@@ -68,19 +76,23 @@ Quando `rewrite_of` é enviado, o backend:
 
 ### Feedback estruturado
 
-Arquivo:
+Arquivos:
 
 ```text
 backend/pedagogy.py
+backend/llm.py
 ```
 
-Função principal:
+Funções principais:
 
 ```py
 build_structured_feedback(grades)
+get_structured_llm_feedback(essay, grades, theme)
 ```
 
-Essa função gera uma estrutura determinística com:
+O sistema tenta gerar feedback estruturado via LLM em JSON. Se a chamada falhar ou retornar estrutura inválida, usa o fallback determinístico de `backend/pedagogy.py`.
+
+A estrutura contém:
 
 - diagnóstico por competência;
 - sugestão de melhoria;
@@ -88,7 +100,45 @@ Essa função gera uma estrutura determinística com:
 - prioridades de estudo;
 - checklist de reescrita.
 
-Ela funciona mesmo quando o feedback textual gerado por LLM não está disponível.
+O campo `feedback_structured_source` registra a origem: `llm` ou `fallback`.
+
+### Checklist de reescrita
+
+Endpoint:
+
+```http
+PUT /redacoes/<id>/rewrite-checklist
+```
+
+Payload:
+
+```json
+{
+  "rewrite_checklist_state": {
+    "c1": true,
+    "c2": false
+  }
+}
+```
+
+Responsabilidade:
+
+- persistir os itens marcados no checklist da redação.
+
+### Atividades do estudante
+
+Endpoint:
+
+```http
+GET /students/<username>/activities
+```
+
+Responsabilidade:
+
+- buscar turmas em que o estudante está matriculado;
+- buscar atividades dessas turmas;
+- verificar se já existe redação enviada para cada atividade;
+- retornar status `pending`, `submitted` ou `late`.
 
 ### Consulta de versões
 
@@ -152,6 +202,7 @@ Componentes:
 - `CompetencyFeedbackMap.tsx`: mapa de feedback por competência.
 - `RewriteChecklist.tsx`: checklist da próxima reescrita.
 - `VersionComparison.tsx`: comparação entre versões da mesma redação.
+- `StudentActivitiesPanel.tsx`: lista de atividades atribuídas ao estudante.
 
 ### Modal de detalhes da redação
 
@@ -198,7 +249,9 @@ Ao submeter, a página envia:
   "essay": "...",
   "id": "<id_tema>",
   "aluno": "<nome_usuario>",
-  "rewrite_of": "<id_redacao>"
+  "rewrite_of": "<id_redacao>",
+  "class_id": "<id_turma>",
+  "activity_id": "<id_atividade>"
 }
 ```
 
@@ -212,9 +265,9 @@ As funcionalidades foram implementadas com fallback para redações antigas:
 - se não houver `version_number`, a redação é tratada como versão `1`;
 - se não houver `feedback_structured`, o frontend monta uma devolutiva básica a partir das notas;
 - se não houver versões associadas, a aba `Versões` mostra um estado vazio.
+- redações antigas sem `class_id` e `activity_id` continuam aparecendo normalmente no histórico do estudante.
 
 ## Limitações atuais
 
-- O checklist é interativo apenas no cliente; o estado marcado ainda não é persistido.
-- O feedback estruturado atual é determinístico e baseado nas notas; ele não usa resposta JSON do LLM.
-- Redações submetidas por OCR recebem feedback estruturado, mas o fluxo principal de reescrita foi implementado para submissão textual.
+- O feedback estruturado via LLM depende de uma chave válida da API; sem ela, o fallback determinístico é usado.
+- O painel de atividades do aluno lista atividades de turmas em que o nome de usuário aparece em `classes.students`.

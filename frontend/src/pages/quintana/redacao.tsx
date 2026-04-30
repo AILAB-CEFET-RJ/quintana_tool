@@ -124,6 +124,30 @@ const Redacao = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const fetchTema = async () => {
+      if (!id || tema) {
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/temas`)
+        if (response.ok) {
+          const temas = await response.json()
+          const temaAtual = temas.find((item: any) => item._id === id)
+          if (temaAtual) {
+            setTema(temaAtual.tema)
+            setDescricaoTema(temaAtual.descricao)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tema:', error)
+      }
+    }
+
+    fetchTema()
+  }, [id, tema])
+
   return (
     <S.Wrapper>
       <S.Title>🧾 Redação 🧾</S.Title>

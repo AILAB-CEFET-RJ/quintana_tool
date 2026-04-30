@@ -62,7 +62,27 @@ Exemplos de verificações:
 - há conectivos adequados entre ideias e parágrafos;
 - a proposta de intervenção tem agente, ação, meio, finalidade e detalhamento.
 
-O checklist aparece junto ao mapa de feedback, na aba `Plano de ação`.
+O checklist aparece junto ao mapa de feedback, na aba `Plano de ação`. Os itens marcados são persistidos na redação, permitindo que o estudante retome a revisão depois.
+
+## Atividades atribuídas
+
+A aba `Atividades` lista as atividades vinculadas às turmas das quais o estudante participa.
+
+Cada atividade mostra:
+
+- título;
+- turma;
+- tema;
+- prazo, quando informado;
+- status.
+
+Status possíveis:
+
+- `Pendente`: ainda não houve envio;
+- `Enviada`: já existe redação vinculada à atividade;
+- `Atrasada`: ainda não houve envio e o prazo já passou.
+
+O botão de envio abre a tela de redação já vinculada à atividade e ao tema correspondente.
 
 ## Reescrita e comparação entre versões
 

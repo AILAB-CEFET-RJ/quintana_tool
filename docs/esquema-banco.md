@@ -1,0 +1,131 @@
+# Esquema lógico do banco de dados
+
+O Quintana usa MongoDB sem validação de schema no próprio banco. A referência técnica dos documentos esperados está em:
+
+```text
+backend/schemas.py
+```
+
+Este documento resume as coleções e seus principais campos.
+
+## Coleções
+
+- `users`
+- `temas`
+- `redacoes`
+- `classes`
+- `activities`
+
+## `users`
+
+```json
+{
+  "_id": "...",
+  "email": "aluno@example.com",
+  "password": "<bcrypt>",
+  "username": "aluno1",
+  "tipoUsuario": "aluno",
+  "schema_version": 1
+}
+```
+
+`tipoUsuario` pode ser `aluno` ou `professor`.
+
+## `temas`
+
+```json
+{
+  "_id": "...",
+  "nome_professor": "professor1",
+  "tema": "Desinformação",
+  "descricao": "Texto da proposta..."
+}
+```
+
+## `redacoes`
+
+```json
+{
+  "_id": "...",
+  "titulo": "Título da redação",
+  "texto": "Texto...",
+  "aluno": "aluno1",
+  "id_tema": "...",
+  "nota_total": 640,
+  "nota_competencia_1_model": 160,
+  "nota_competencia_2_model": 120,
+  "nota_competencia_3_model": 120,
+  "nota_competencia_4_model": 160,
+  "nota_competencia_5_model": 80,
+  "nota_professor": "",
+  "feedback_llm": "...",
+  "feedback_structured": {
+    "competencies": [],
+    "priorities": [],
+    "rewrite_checklist": []
+  },
+  "feedback_structured_source": "llm",
+  "rewrite_checklist_state": {
+    "c1": true
+  },
+  "created_at": "2026-04-30T...",
+  "updated_at": "2026-04-30T...",
+  "submitted_at": "2026-04-30T...",
+  "version_group_id": "...",
+  "parent_redacao_id": "...",
+  "version_number": 2,
+  "class_id": "...",
+  "activity_id": "...",
+  "correction_source": "model",
+  "is_latest_version": true,
+  "schema_version": 1
+}
+```
+
+Observações:
+
+- `version_group_id` agrupa versões da mesma redação.
+- `parent_redacao_id` aponta para a versão anterior.
+- `feedback_structured_source` pode ser `llm` ou `fallback`.
+- `class_id` e `activity_id` são opcionais para redações antigas ou envios fora de atividade.
+
+## `classes`
+
+```json
+{
+  "_id": "...",
+  "name": "3001 - Manhã",
+  "teacher": "professor1",
+  "students": ["aluno1", "aluno2"],
+  "created_at": "2026-04-30T...",
+  "updated_at": "2026-04-30T...",
+  "schema_version": 1
+}
+```
+
+## `activities`
+
+```json
+{
+  "_id": "...",
+  "title": "Redação 3",
+  "teacher": "professor1",
+  "class_id": "...",
+  "theme_id": "...",
+  "due_date": "2026-05-10",
+  "created_at": "2026-04-30T...",
+  "updated_at": "2026-04-30T...",
+  "schema_version": 1
+}
+```
+
+## Validação no backend
+
+O arquivo `backend/schemas.py` define:
+
+- `TypedDicts` para cada documento;
+- `SCHEMAS` com campos obrigatórios e opcionais;
+- `missing_required_fields`;
+- `validate_required_fields`.
+
+A validação atual é leve e aplicada nos principais pontos de escrita do backend. Ela não substitui uma validação de schema no MongoDB.

@@ -3,9 +3,10 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
-from llm import get_llm_feedback
+from llm import get_llm_feedback, get_structured_llm_feedback
 from pedagogy import build_structured_feedback
 from analytics import build_teacher_analytics
+from schemas import validate_required_fields
 from flask_cors import CORS
 import bcrypt
 import os
@@ -23,6 +24,65 @@ competencias = {
     "comp4":"Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação",
     "comp5":"Proposta de intervenção com respeito aos direitos humanos",
 }
+
+
+def activity_belongs_to_teacher(activity_id, teacher):
+    if not activity_id or not ObjectId.is_valid(activity_id):
+        return False
+    return database.db.activities.find_one({"_id": ObjectId(activity_id), "teacher": teacher}) is not None
+
+
+def class_belongs_to_teacher(class_id, teacher):
+    if not class_id or not ObjectId.is_valid(class_id):
+        return False
+    return database.db.classes.find_one({"_id": ObjectId(class_id), "teacher": teacher}) is not None
+
+
+def build_activity_submission_status(activity_id):
+    activity = database.db.activities.find_one({"_id": ObjectId(activity_id)})
+    if not activity:
+        return None
+
+    class_doc = database.db.classes.find_one({"_id": ObjectId(activity.get("class_id"))}) if ObjectId.is_valid(activity.get("class_id", "")) else None
+    theme = database.db.temas.find_one({"_id": ObjectId(activity.get("theme_id"))}) if ObjectId.is_valid(activity.get("theme_id", "")) else None
+    expected_students = sorted(class_doc.get("students", [])) if class_doc else []
+    redacoes = list(database.db.redacoes.find({"activity_id": activity_id}))
+    submitted_students = sorted(set(redacao.get("aluno") for redacao in redacoes if redacao.get("aluno")))
+    missing_students = sorted(set(expected_students) - set(submitted_students))
+    due_date = activity.get("due_date", "")
+    today = datetime.now(timezone.utc).date().isoformat()
+    late_students = missing_students if due_date and due_date < today else []
+
+    return {
+        "activity": {
+            "_id": str(activity["_id"]),
+            "title": activity.get("title"),
+            "teacher": activity.get("teacher"),
+            "class_id": activity.get("class_id"),
+            "class_name": class_doc.get("name") if class_doc else "Turma não encontrada",
+            "theme_id": activity.get("theme_id"),
+            "theme": theme.get("tema") if theme else "Tema não encontrado",
+            "due_date": due_date,
+        },
+        "expected_students": expected_students,
+        "submitted_students": submitted_students,
+        "missing_students": missing_students,
+        "late_students": late_students,
+        "submission_count": len(submitted_students),
+        "expected_count": len(expected_students),
+    }
+
+
+def validate_structured_feedback_payload(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("feedback estruturado não é objeto")
+    if not isinstance(payload.get("competencies"), list) or len(payload["competencies"]) != 5:
+        raise ValueError("feedback estruturado deve conter 5 competências")
+    if not isinstance(payload.get("priorities"), list):
+        raise ValueError("feedback estruturado deve conter prioridades")
+    if not isinstance(payload.get("rewrite_checklist"), list):
+        raise ValueError("feedback estruturado deve conter checklist")
+    return payload
 
 
 @app.route("/")
@@ -93,6 +153,7 @@ def post_model_response():
         "parent_redacao_id": rewrite_of if parent_redacao else None,
         "version_number": version_number,
         "feedback_structured": feedback_structured,
+        "feedback_structured_source": "fallback",
         "rewrite_checklist_state": {},
         "class_id": class_id,
         "activity_id": activity_id,
@@ -100,6 +161,8 @@ def post_model_response():
         "correction_source": "model",
         "is_latest_version": True
     }
+    essay_data["schema_version"] = 1
+    validate_required_fields("redacoes", essay_data)
 
     if parent_redacao:
         database.db.redacoes.update_many(
@@ -112,10 +175,13 @@ def post_model_response():
     def gerar_feedback():
         try:
             feedback = get_llm_feedback(essay, grades, theme)
+            structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
             database.db.redacoes.update_one(
                 {"_id": essay_id},
                 {"$set": {
                     "feedback_llm": feedback,
+                    "feedback_structured": structured,
+                    "feedback_structured_source": "llm",
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }}
             )
@@ -124,6 +190,7 @@ def post_model_response():
                 {"_id": essay_id},
                 {"$set": {
                     "feedback_llm": f"Feedback textual indisponível no momento: {exc}",
+                    "feedback_structured_source": "fallback",
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }}
             )
@@ -157,10 +224,20 @@ def post_model_response_witht_ocr():
         "nota5": float(obj.get('nota_5', 0))
     }
 
-    feedback_llm = get_llm_feedback(essay, grades)
+    theme = database.get_tema(id_theme)
+    try:
+        feedback_llm = get_llm_feedback(essay, grades, theme)
+    except Exception as exc:
+        feedback_llm = f"Feedback textual indisponível no momento: {exc}"
 
     now = datetime.now(timezone.utc).isoformat()
     feedback_structured = build_structured_feedback(grades)
+    feedback_structured_source = "fallback"
+    try:
+        feedback_structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
+        feedback_structured_source = "llm"
+    except Exception:
+        pass
 
     essay_data = {
         "titulo": "Redação de imagem",
@@ -180,6 +257,7 @@ def post_model_response_witht_ocr():
         "parent_redacao_id": None,
         "version_number": 1,
         "feedback_structured": feedback_structured,
+        "feedback_structured_source": feedback_structured_source,
         "rewrite_checklist_state": {},
         "class_id": class_id,
         "activity_id": activity_id,
@@ -187,6 +265,8 @@ def post_model_response_witht_ocr():
         "correction_source": "model",
         "is_latest_version": True
     }
+    essay_data["schema_version"] = 1
+    validate_required_fields("redacoes", essay_data)
 
     essays_collection = database.db.redacoes
     essays_collection.insert_one(essay_data).inserted_id
@@ -206,6 +286,14 @@ def create_user():
         return jsonify({"error": "Dados insuficientes"}), 400
 
     hashed_password = bcrypt.hashpw(user_data['password'].encode('utf-8'), bcrypt.gensalt())
+
+    user_document = {
+        **user_data,
+        "username": user_data['nomeUsuario'],
+        "password": hashed_password,
+        "tipoUsuario": user_data.get('tipoUsuario', 'usuario'),
+    }
+    validate_required_fields("users", user_document)
 
     database.insert_user(user_data, hashed_password)
 
@@ -246,8 +334,150 @@ def get_alunos():
 def get_professor_analytics(nome_professor):
     class_id = request.args.get("class_id")
     activity_id = request.args.get("activity_id")
-    analytics = build_teacher_analytics(nome_professor, class_id, activity_id)
+    group_by = request.args.get("group_by", "activity")
+    analytics = build_teacher_analytics(nome_professor, class_id, activity_id, group_by)
     return jsonify(analytics)
+
+
+@app.get("/classes")
+def get_classes():
+    teacher = request.args.get("teacher")
+    if not teacher:
+        return jsonify({"error": "teacher é obrigatório"}), 400
+
+    return jsonify(database.get_classes(teacher))
+
+
+@app.post("/classes")
+def create_class():
+    data = request.json
+    if 'teacher' not in data or 'name' not in data:
+        return jsonify({"error": "Dados insuficientes"}), 400
+
+    now = datetime.now(timezone.utc).isoformat()
+    class_data = {
+        "name": data.get("name"),
+        "teacher": data.get("teacher"),
+        "students": data.get("students", []),
+        "created_at": now,
+        "updated_at": now,
+        "schema_version": 1,
+    }
+    validate_required_fields("classes", class_data)
+    inserted_id = database.create_class(class_data).inserted_id
+    class_data["_id"] = str(inserted_id)
+    return jsonify(class_data), 201
+
+
+@app.put("/classes/<id>")
+def update_class(id):
+    try:
+        data = request.json
+        teacher = data.get("teacher")
+        if teacher and not class_belongs_to_teacher(id, teacher):
+            return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        result = database.update_class(id, data)
+
+        if result.matched_count == 1:
+            return jsonify({"message": "Turma atualizada com sucesso!"}), 200
+        return jsonify({"error": "Turma não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.delete("/classes/<id>")
+def delete_class(id):
+    try:
+        teacher = request.args.get("teacher")
+        if teacher and not class_belongs_to_teacher(id, teacher):
+            return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+        result = database.delete_class(id)
+        if result.deleted_count == 1:
+            return jsonify({"message": "Turma deletada com sucesso!"}), 200
+        return jsonify({"error": "Turma não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/activities")
+def get_activities():
+    teacher = request.args.get("teacher")
+    class_id = request.args.get("class_id")
+    if not teacher:
+        return jsonify({"error": "teacher é obrigatório"}), 400
+
+    return jsonify(database.get_activities(teacher, class_id))
+
+
+@app.post("/activities")
+def create_activity():
+    data = request.json
+    if 'teacher' not in data or 'title' not in data or 'class_id' not in data or 'theme_id' not in data:
+        return jsonify({"error": "Dados insuficientes"}), 400
+
+    now = datetime.now(timezone.utc).isoformat()
+    activity_data = {
+        "title": data.get("title"),
+        "teacher": data.get("teacher"),
+        "class_id": data.get("class_id"),
+        "theme_id": data.get("theme_id"),
+        "due_date": data.get("due_date", ""),
+        "created_at": now,
+        "updated_at": now,
+        "schema_version": 1,
+    }
+    validate_required_fields("activities", activity_data)
+    inserted_id = database.create_activity(activity_data).inserted_id
+    activity_data["_id"] = str(inserted_id)
+    return jsonify(activity_data), 201
+
+
+@app.put("/activities/<id>")
+def update_activity(id):
+    try:
+        data = request.json
+        teacher = data.get("teacher")
+        if teacher and not activity_belongs_to_teacher(id, teacher):
+            return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        result = database.update_activity(id, data)
+
+        if result.matched_count == 1:
+            return jsonify({"message": "Atividade atualizada com sucesso!"}), 200
+        return jsonify({"error": "Atividade não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.delete("/activities/<id>")
+def delete_activity(id):
+    try:
+        teacher = request.args.get("teacher")
+        if teacher and not activity_belongs_to_teacher(id, teacher):
+            return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+        result = database.delete_activity(id)
+        if result.deleted_count == 1:
+            return jsonify({"message": "Atividade deletada com sucesso!"}), 200
+        return jsonify({"error": "Atividade não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/activities/<id>/submissions")
+def get_activity_submissions(id):
+    teacher = request.args.get("teacher")
+    if teacher and not activity_belongs_to_teacher(id, teacher):
+        return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+
+    if not ObjectId.is_valid(id):
+        return jsonify({"error": "ID inválido"}), 400
+
+    status = build_activity_submission_status(id)
+    if not status:
+        return jsonify({"error": "Atividade não encontrada"}), 404
+
+    return jsonify(status)
 
 
 @app.get("/temas")
@@ -262,8 +492,70 @@ def create_tema():
     if 'nome_professor' not in tema_data or 'tema' not in tema_data or 'descricao' not in tema_data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
+    validate_required_fields("temas", tema_data)
     database.create_tema(tema_data)
     return jsonify({"message": "Tema criado com sucesso"}), 201
+
+
+@app.get("/students/<username>/activities")
+def get_student_activities(username):
+    classes = list(database.db.classes.find({"students": username}))
+    class_ids = [str(item["_id"]) for item in classes]
+    activities = list(database.db.activities.find({"class_id": {"$in": class_ids}}))
+    theme_ids = [item.get("theme_id") for item in activities]
+    themes = {
+        str(item["_id"]): item
+        for item in database.db.temas.find({"_id": {"$in": [ObjectId(value) for value in theme_ids if ObjectId.is_valid(value)]}})
+    }
+    submitted = {
+        item.get("activity_id")
+        for item in database.db.redacoes.find({"aluno": username, "activity_id": {"$in": [str(item["_id"]) for item in activities]}})
+    }
+    class_map = {str(item["_id"]): item for item in classes}
+
+    result = []
+    today = datetime.now(timezone.utc).date().isoformat()
+    for activity in activities:
+        activity_id = str(activity["_id"])
+        class_doc = class_map.get(activity.get("class_id"), {})
+        theme = themes.get(activity.get("theme_id"), {})
+        status = "submitted" if activity_id in submitted else "pending"
+        if status == "pending" and activity.get("due_date") and activity.get("due_date") < today:
+            status = "late"
+
+        result.append({
+            "_id": activity_id,
+            "title": activity.get("title"),
+            "theme_id": activity.get("theme_id"),
+            "theme": theme.get("tema", "Tema não encontrado"),
+            "description": theme.get("descricao", ""),
+            "class_id": activity.get("class_id"),
+            "class_name": class_doc.get("name", "Turma não encontrada"),
+            "due_date": activity.get("due_date", ""),
+            "status": status,
+        })
+
+    return jsonify(result)
+
+
+@app.put("/redacoes/<id>/rewrite-checklist")
+def update_rewrite_checklist(id):
+    try:
+        data = request.json
+        state = data.get("rewrite_checklist_state", {})
+        result = database.db.redacoes.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {
+                "rewrite_checklist_state": state,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+
+        if result.matched_count == 1:
+            return jsonify({"message": "Checklist atualizado com sucesso!"}), 200
+        return jsonify({"error": "Redação não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.put("/temas/<id>")

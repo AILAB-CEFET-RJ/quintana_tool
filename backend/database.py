@@ -32,7 +32,8 @@ def insert_user(user_data, password):
         "email": user_data['email'],
         "password": password,
         "username": user_data['nomeUsuario'],
-        "tipoUsuario": user_data.get('tipoUsuario', 'usuario')
+        "tipoUsuario": user_data.get('tipoUsuario', 'usuario'),
+        "schema_version": 1
     })
 
 def login(user_data):
@@ -48,6 +49,10 @@ def get_alunos():
         aluno.pop('password', None)  # Remove o campo 'password' para evitar problemas com bytes
 
     return alunos
+
+def serialize_document(document):
+    document['_id'] = str(document['_id'])
+    return document
 
 def update_tema(id, data):
     temas_collection = db.temas
@@ -67,6 +72,53 @@ def update_tema(id, data):
 def delete_tema(id):
     temas_collection = db.temas
     return temas_collection.delete_one({"_id": id})
+
+def get_classes(teacher):
+    classes = list(db.classes.find({"teacher": teacher}))
+    return [serialize_document(item) for item in classes]
+
+def create_class(data):
+    return db.classes.insert_one(data)
+
+def update_class(id, data):
+    return db.classes.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {
+            "name": data.get("name"),
+            "teacher": data.get("teacher"),
+            "students": data.get("students", []),
+            "updated_at": data.get("updated_at"),
+        }}
+    )
+
+def delete_class(id):
+    return db.classes.delete_one({"_id": ObjectId(id)})
+
+def get_activities(teacher, class_id=None):
+    query = {"teacher": teacher}
+    if class_id:
+        query["class_id"] = class_id
+    activities = list(db.activities.find(query))
+    return [serialize_document(item) for item in activities]
+
+def create_activity(data):
+    return db.activities.insert_one(data)
+
+def update_activity(id, data):
+    return db.activities.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {
+            "title": data.get("title"),
+            "teacher": data.get("teacher"),
+            "class_id": data.get("class_id"),
+            "theme_id": data.get("theme_id"),
+            "due_date": data.get("due_date"),
+            "updated_at": data.get("updated_at"),
+        }}
+    )
+
+def delete_activity(id):
+    return db.activities.delete_one({"_id": ObjectId(id)})
 
 def get_redacoes(user_name):
     redacoes_collection = db.redacoes

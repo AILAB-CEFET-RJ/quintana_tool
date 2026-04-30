@@ -68,6 +68,7 @@ const TeacherAlerts: React.FC<{ alerts: any[] }> = ({ alerts }) => (
             type={alert.severity === 'high' ? 'warning' : 'info'}
             showIcon
             message={alert.message}
+            description={alert.action}
           />
         ))}
       </div>
@@ -96,28 +97,52 @@ const ProblemRanking: React.FC<{ ranking: any[] }> = ({ ranking }) => (
 )
 
 const CompetencyDistribution: React.FC<{ distribution: any[] }> = ({ distribution }) => {
-  const max = 200
-
   return (
     <Card title="Distribuição da turma por competência" style={styles.card}>
-      <div style={styles.barList}>
+      <div style={styles.boxplotList}>
         {distribution.map((item) => (
-          <div key={item.competency} style={styles.barRow}>
-            <div style={styles.barLabel}>
+          <div key={item.competency} style={styles.boxplotRow}>
+            <div style={styles.boxplotLabel}>
               <strong>{item.competency}</strong>
               <span>{item.title}</span>
             </div>
-            <div style={styles.barTrack}>
-              <div style={{ ...styles.barFill, width: `${Math.min(100, (item.average / max) * 100)}%` }} />
-            </div>
-            <div style={styles.barStats}>
-              <strong>{Math.round(item.average)}</strong>
+            <Boxplot item={item} />
+            <div style={styles.boxplotStats}>
+              <strong>média {Math.round(item.average)}</strong>
               <span>mediana {Math.round(item.median)}</span>
             </div>
           </div>
         ))}
       </div>
     </Card>
+  )
+}
+
+const Boxplot: React.FC<{ item: any }> = ({ item }) => {
+  const width = 360
+  const height = 42
+  const x = (value: number) => Math.max(8, Math.min(width - 8, (Number(value || 0) / 200) * (width - 16) + 8))
+  const y = height / 2
+  const q1 = x(item.q1)
+  const q3 = x(item.q3)
+  const medianX = x(item.median)
+  const lower = x(item.lower_whisker)
+  const upper = x(item.upper_whisker)
+
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Boxplot ${item.competency}`}>
+      <line x1="8" y1={y} x2={width - 8} y2={y} stroke="#eef2f7" strokeWidth="6" strokeLinecap="round" />
+      <line x1={lower} y1={y} x2={upper} y2={y} stroke="#1677ff" strokeWidth="2" />
+      <line x1={lower} y1={y - 8} x2={lower} y2={y + 8} stroke="#1677ff" strokeWidth="2" />
+      <line x1={upper} y1={y - 8} x2={upper} y2={y + 8} stroke="#1677ff" strokeWidth="2" />
+      <rect x={q1} y={y - 12} width={Math.max(q3 - q1, 2)} height="24" rx="4" fill="#e6f4ff" stroke="#1677ff" />
+      <line x1={medianX} y1={y - 14} x2={medianX} y2={y + 14} stroke="#0958d9" strokeWidth="3" />
+      {(item.outliers || []).map((value: number, index: number) => (
+        <circle key={`${value}-${index}`} cx={x(value)} cy={y} r="3" fill="#cf1322" />
+      ))}
+      <text x="8" y={height - 2} fontSize="10" fill="#6b7280">0</text>
+      <text x={width - 8} y={height - 2} fontSize="10" textAnchor="end" fill="#6b7280">200</text>
+    </svg>
   )
 }
 
@@ -170,6 +195,7 @@ const PedagogicalGroups: React.FC<{ groups: any[] }> = ({ groups }) => (
           <div key={group.competency} style={styles.group}>
             <strong>{group.competency} - {group.title}</strong>
             <p style={styles.muted}>{group.recommended_activity}</p>
+            {group.profile && <p style={styles.profile}>{group.profile}</p>}
             <div style={styles.tags}>
               {group.students.map((student: string) => <Tag key={student}>{student}</Tag>)}
             </div>
@@ -221,7 +247,7 @@ const ClassEvolution: React.FC<{ evolution: any[] }> = ({ evolution }) => {
             <g key={item.theme_id || index}>
               <circle cx={xFor(index)} cy={yFor(item.total_average)} r="4" fill="#1677ff" />
               <text x={xFor(index)} y={height - 18} textAnchor="middle" fontSize="11" fill="#6b7280">
-                {`Tema ${index + 1}`}
+                {item.group_by === 'week' ? item.label.slice(5) : `${index + 1}`}
               </text>
             </g>
           ))}
@@ -296,33 +322,22 @@ const styles: Record<string, CSSProperties> = {
     margin: '4px 0 0',
     color: '#6b7280'
   },
-  barList: {
+  boxplotList: {
     display: 'grid',
-    gap: 14
+    gap: 16
   },
-  barRow: {
+  boxplotRow: {
     display: 'grid',
-    gridTemplateColumns: '180px 1fr 110px',
+    gridTemplateColumns: '180px minmax(220px, 1fr) 130px',
     gap: 12,
     alignItems: 'center'
   },
-  barLabel: {
+  boxplotLabel: {
     display: 'grid',
     gap: 2,
     color: '#374151'
   },
-  barTrack: {
-    height: 12,
-    borderRadius: 999,
-    background: '#eef2f7',
-    overflow: 'hidden'
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 999,
-    background: '#1677ff'
-  },
-  barStats: {
+  boxplotStats: {
     display: 'grid',
     textAlign: 'right',
     color: '#374151'
@@ -340,6 +355,11 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 8,
     padding: 12,
     background: '#f9fafb'
+  },
+  profile: {
+    margin: '4px 0 10px',
+    color: '#4b5563',
+    fontSize: 13
   },
   tags: {
     display: 'flex',

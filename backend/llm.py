@@ -62,16 +62,37 @@ def get_llm_feedback(essay, grades, theme) -> str:
     )
     return resp.choices[0].message.content
 
-    '''
-    response = ollama_client.chat(
-        model="gemma:7b",
+
+def get_structured_llm_feedback(essay, grades, theme) -> dict:
+    competencies = "\n".join([
+        f"- {index + 1}: {name} | Nota {score}"
+        for index, (name, score) in enumerate(grades.items())
+    ])
+
+    system_prompt = (
+        "Você é um avaliador pedagógico especialista em redação do ENEM. "
+        "Retorne apenas JSON válido, sem markdown. "
+        "O JSON deve conter as chaves: competencies, priorities e rewrite_checklist. "
+        "competencies deve ser uma lista com 5 objetos contendo: code, title, description, score, diagnosis, suggestion, practice_action. "
+        "priorities deve conter 3 objetos ordenados por urgência contendo: rank, competency, title, score, reason, next_action. "
+        "rewrite_checklist deve conter itens com: id, competency, label. "
+        "Use códigos C1, C2, C3, C4 e C5. Não invente nota; use as notas fornecidas."
+    )
+
+    user_prompt = (
+        f"Tema:\n{theme}\n\n"
+        f"Redação:\n{essay}\n\n"
+        f"Competências e notas:\n{competencies}"
+    )
+
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.2,
+        response_format={"type": "json_object"},
     )
-    
 
-    return response["message"]["content"]
-    '''
-    
+    return json.loads(resp.choices[0].message.content)

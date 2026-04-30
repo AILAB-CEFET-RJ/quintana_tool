@@ -13,6 +13,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import SectionPanel from '@/components/ui/SectionPanel';
 import { getCompetencyScores } from '@/lib/competencias';
 import TeacherAnalyticsPanel from '@/components/teacherAnalytics/TeacherAnalyticsPanel';
+import TeacherClassActivityManager from '@/components/teacherAnalytics/TeacherClassActivityManager';
+import StudentActivitiesPanel from '@/components/studentInsights/StudentActivitiesPanel';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -73,6 +75,12 @@ const Home = () => {
     const [teacherAnalytics, setTeacherAnalytics] = useState<any>(null);
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
     const [analyticsError, setAnalyticsError] = useState('');
+    const [classesData, setClassesData] = useState<any[]>([]);
+    const [activitiesData, setActivitiesData] = useState<any[]>([]);
+    const [studentActivities, setStudentActivities] = useState<any[]>([]);
+    const [selectedClassId, setSelectedClassId] = useState<string>('todos');
+    const [selectedActivityId, setSelectedActivityId] = useState<string>('todos');
+    const [analyticsGroupBy, setAnalyticsGroupBy] = useState<string>('activity');
     const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth();
 
     const handleTabChange = (key: string) => {
@@ -145,7 +153,16 @@ const Home = () => {
             try {
                 setAnalyticsLoading(true);
                 setAnalyticsError('');
-                const response = await fetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics`);
+                const params = new URLSearchParams();
+                if (selectedClassId !== 'todos') {
+                    params.append('class_id', selectedClassId);
+                }
+                if (selectedActivityId !== 'todos') {
+                    params.append('activity_id', selectedActivityId);
+                }
+                params.append('group_by', analyticsGroupBy);
+                const query = params.toString();
+                const response = await fetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics${query ? `?${query}` : ''}`);
                 if (!response.ok) {
                     throw new Error('Erro ao buscar análise da turma');
                 }
@@ -160,7 +177,53 @@ const Home = () => {
         };
 
         fetchTeacherAnalytics();
-    }, [tipoUsuario, nomeUsuario, redacoesData.length, temasData.length]);
+    }, [tipoUsuario, nomeUsuario, redacoesData.length, temasData.length, selectedClassId, selectedActivityId, analyticsGroupBy]);
+
+    useEffect(() => {
+        const fetchStudentActivities = async () => {
+            if (tipoUsuario !== 'aluno' || !nomeUsuario) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/students/${encodeURIComponent(nomeUsuario)}/activities`);
+                if (response.ok) {
+                    setStudentActivities(await response.json());
+                }
+            } catch (error) {
+                console.error('Erro ao buscar atividades do aluno:', error);
+            }
+        };
+
+        fetchStudentActivities();
+    }, [tipoUsuario, nomeUsuario, redacoesData.length]);
+
+    const fetchTeacherStructure = async () => {
+        if (tipoUsuario !== 'professor' || !nomeUsuario) {
+            return;
+        }
+
+        try {
+            const [classesResponse, activitiesResponse] = await Promise.all([
+                fetch(`${API_URL}/classes?teacher=${encodeURIComponent(nomeUsuario)}`),
+                fetch(`${API_URL}/activities?teacher=${encodeURIComponent(nomeUsuario)}`)
+            ]);
+
+            if (classesResponse.ok) {
+                setClassesData(await classesResponse.json());
+            }
+
+            if (activitiesResponse.ok) {
+                setActivitiesData(await activitiesResponse.json());
+            }
+        } catch (error) {
+            console.error('Erro ao buscar turmas e atividades:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchTeacherStructure();
+    }, [tipoUsuario, nomeUsuario]);
 
     const handleDeleteTema = async (id: string) => {
         try {
@@ -371,8 +434,49 @@ const Home = () => {
                         />
                     }
                 </TabPane>
+                {tipoUsuario === 'aluno' && (
+                    <TabPane tab="Atividades" key="3">
+                        <StudentActivitiesPanel activities={studentActivities} />
+                    </TabPane>
+                )}
                 {tipoUsuario === 'professor' && (
                     <TabPane tab="Análise da turma" key="3">
+                        <Space style={{ marginBottom: 16 }} wrap>
+                            <Select
+                                value={selectedClassId}
+                                style={{ minWidth: 220 }}
+                                onChange={(value) => {
+                                    setSelectedClassId(value);
+                                    setSelectedActivityId('todos');
+                                }}
+                            >
+                                <Option value="todos">Todas as turmas</Option>
+                                {classesData.map((item) => (
+                                    <Option key={item._id} value={item._id}>{item.name}</Option>
+                                ))}
+                            </Select>
+                            <Select
+                                value={selectedActivityId}
+                                style={{ minWidth: 260 }}
+                                onChange={setSelectedActivityId}
+                            >
+                                <Option value="todos">Todas as atividades</Option>
+                                {activitiesData
+                                    .filter((item) => selectedClassId === 'todos' || item.class_id === selectedClassId)
+                                    .map((item) => (
+                                        <Option key={item._id} value={item._id}>{item.title}</Option>
+                                    ))}
+                            </Select>
+                            <Select
+                                value={analyticsGroupBy}
+                                style={{ minWidth: 180 }}
+                                onChange={setAnalyticsGroupBy}
+                            >
+                                <Option value="activity">Agrupar por atividade</Option>
+                                <Option value="theme">Agrupar por tema</Option>
+                                <Option value="week">Agrupar por dia</Option>
+                            </Select>
+                        </Space>
                         {analyticsLoading ? (
                             <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
                                 <Spin />
@@ -382,6 +486,16 @@ const Home = () => {
                         ) : (
                             <TeacherAnalyticsPanel data={teacherAnalytics} />
                         )}
+                    </TabPane>
+                )}
+                {tipoUsuario === 'professor' && (
+                    <TabPane tab="Turmas e atividades" key="4">
+                        <TeacherClassActivityManager
+                            teacher={nomeUsuario}
+                            alunos={alunos}
+                            temas={temasData}
+                            onChanged={fetchTeacherStructure}
+                        />
                     </TabPane>
                 )}
             </Tabs>
