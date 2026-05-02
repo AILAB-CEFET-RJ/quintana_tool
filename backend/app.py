@@ -1,6 +1,5 @@
 import database
 from flask import Flask, request, jsonify
-from pymongo import MongoClient
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
 from llm import get_llm_feedback, get_structured_llm_feedback
@@ -87,7 +86,12 @@ def validate_structured_feedback_payload(payload):
 
 @app.route("/")
 def health():
-    return ("OK!", 200)
+    db_ok, db_error = database.check_db_connection()
+    status = {
+        "status": "ok" if db_ok else "degraded",
+        "database": "connected" if db_ok else f"unavailable: {db_error}",
+    }
+    return jsonify(status), 200 if db_ok else 503
 
 
 @app.post("/model")
@@ -638,5 +642,5 @@ def update_redacao(id):
 
 if __name__ == "__main__":
   from support import use_vectorizer
-  debug = True # com essa opção como True, ao salvar, o "site" recarrega automaticamente.
+  debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
   app.run(host='0.0.0.0', port=5000, debug=debug)

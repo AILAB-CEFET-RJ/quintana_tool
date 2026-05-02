@@ -1,11 +1,21 @@
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from bson import ObjectId
+import certifi
 import os
 
 mongo_uri = os.getenv('MONGO_URI')
 
-client = MongoClient(mongo_uri)
+client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=20000)
 db = client.textgrader
+
+
+def check_db_connection():
+    try:
+        client.admin.command('ping')
+        return True, None
+    except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+        return False, str(e)
 
 def create_tema(data):
     temas_collection = db.temas

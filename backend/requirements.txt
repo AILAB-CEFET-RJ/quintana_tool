@@ -7,6 +7,7 @@ python-dotenv
 azure-cognitiveservices-vision-computervision
 pillow
 pymongo
+certifi
 bcrypt
 ollama
 openai

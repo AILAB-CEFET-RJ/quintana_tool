@@ -46,7 +46,7 @@ const Login = () => {
         } catch (error) {
             console.error('Erro ao fazer login:', error)
             if (axios.isAxiosError(error) && !error.response) {
-                setErrorMessage('Não foi possível conectar ao backend em http://localhost:5000.')
+                setErrorMessage('Não foi possível conectar ao backend')
             } else {
                 setErrorMessage('E-mail ou senha inválidos.')
             }

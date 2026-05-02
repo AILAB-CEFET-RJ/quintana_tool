@@ -44,7 +44,7 @@ const Cadastro = () => {
         } catch (error) {
             console.error('Erro ao cadastrar usuário:', error)
             if (axios.isAxiosError(error) && !error.response) {
-                setErrorMessage('Não foi possível conectar ao backend em http://localhost:5000.')
+                setErrorMessage('Não foi possível conectar ao backend')
             } else {
                 setErrorMessage('Erro ao cadastrar usuário. Verifique os dados e tente novamente.')
             }

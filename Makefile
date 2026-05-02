@@ -1,6 +1,9 @@
 COMPOSE_FILE := docker-compose.yml
 DOCKER_COMPOSE := docker-compose
 
+setup-env:
+	cp .env.example .env
+
 up:
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up --build
 
