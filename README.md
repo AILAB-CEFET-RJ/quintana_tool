@@ -5,6 +5,14 @@
 
 Este projeto visa demonstrar como técnicas modernas de Processamento de Linguagem Natural podem ser aplicadas para ampliar o acesso a ferramentas educacionais com retorno formativo, objetivo e explicável.
 
+## ✨ Por que Quintana?
+
+O nome **Quintana** é uma homenagem a **Mário Quintana**, escritor, poeta, jornalista e tradutor brasileiro. Reconhecido como o poeta das “coisas simples”, Quintana construiu uma obra marcada pela delicadeza, pela ironia, pela profundidade e pelo cuidado técnico com a linguagem.
+
+Ao adotar esse nome, a ferramenta busca fazer referência a essa relação sensível e rigorosa com a escrita. Assim como a obra de Mário Quintana valoriza a expressão em língua portuguesa e a capacidade de comunicar ideias com clareza, simplicidade e profundidade, a ferramenta **Quintana** tem como propósito apoiar estudantes no desenvolvimento de suas redações, oferecendo avaliações e sugestões que contribuam para o aprimoramento da escrita.
+
+A escolha do nome também reforça a intenção educacional do projeto: não substituir o olhar humano sobre o texto, mas oferecer um apoio formativo que ajude o estudante a refletir sobre sua produção escrita e a aperfeiçoá-la ao longo do processo de aprendizagem.
+
 ## 🚀 Como executar a aplicação
 
 Para executar a aplicação localmente, é necessário ter o Docker instalado e um servidor MongoDB acessível.
