@@ -1,5 +1,5 @@
 import database
-from flask import Flask, request, jsonify
+from flask import Flask, g, request, jsonify
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
 from llm import get_llm_feedback, get_structured_llm_feedback
@@ -7,13 +7,16 @@ from pedagogy import build_structured_feedback
 from analytics import build_teacher_analytics
 from schemas import validate_required_fields
 from flask_cors import CORS
+from config import get_cors_origins, should_expose_errors
+from auth import create_token, require_auth, require_role
 import bcrypt
 import os
 from threading import Thread
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-CORS(app) 
+cors_origins = get_cors_origins()
+CORS(app, origins=cors_origins if cors_origins else [])
 
 
 competencias = {
@@ -35,6 +38,46 @@ def class_belongs_to_teacher(class_id, teacher):
     if not class_id or not ObjectId.is_valid(class_id):
         return False
     return database.db.classes.find_one({"_id": ObjectId(class_id), "teacher": teacher}) is not None
+
+
+def theme_belongs_to_teacher(theme_id, teacher):
+    if not theme_id or not ObjectId.is_valid(theme_id):
+        return False
+    return database.db.temas.find_one({"_id": ObjectId(theme_id), "nome_professor": teacher}) is not None
+
+
+def redacao_belongs_to_user(redacao, user):
+    if not redacao or not user:
+        return False
+
+    username = user.get("username")
+    role = user.get("tipoUsuario")
+    if role == "aluno":
+        return redacao.get("aluno") == username
+
+    if role == "professor":
+        if theme_belongs_to_teacher(redacao.get("id_tema"), username):
+            return True
+        if class_belongs_to_teacher(redacao.get("class_id"), username):
+            return True
+        if activity_belongs_to_teacher(redacao.get("activity_id"), username):
+            return True
+
+    return False
+
+
+def get_authorized_redacao_or_404(id):
+    if not ObjectId.is_valid(id):
+        return None, (jsonify({"error": "ID inválido"}), 400)
+
+    redacao = database.get_redacao_document(id)
+    if not redacao:
+        return None, (jsonify({"error": "Redação não encontrada"}), 404)
+
+    if not redacao_belongs_to_user(redacao, g.current_user):
+        return None, (jsonify({"error": "Acesso negado"}), 403)
+
+    return redacao, None
 
 
 def build_activity_submission_status(activity_id):
@@ -84,24 +127,38 @@ def validate_structured_feedback_payload(payload):
     return payload
 
 
+def error_response(message, status=500, exc=None):
+    payload = {"error": message}
+    if exc is not None and should_expose_errors():
+        payload["detail"] = str(exc)
+    return jsonify(payload), status
+
+
 @app.route("/")
 def health():
     db_ok, db_error = database.check_db_connection()
     status = {
         "status": "ok" if db_ok else "degraded",
-        "database": "connected" if db_ok else f"unavailable: {db_error}",
+        "database": "connected" if db_ok else "unavailable",
     }
+    if db_error and should_expose_errors():
+        status["database_error"] = db_error
     return jsonify(status), 200 if db_ok else 503
 
 
 @app.post("/model")
+@require_role("aluno")
 def post_model_response():
     essay = request.json['essay']
     id_theme = request.json['id']
-    student = request.json['aluno']
+    student = g.current_user["username"]
     rewrite_of = request.json.get('rewrite_of')
     class_id = request.json.get('class_id')
     activity_id = request.json.get('activity_id')
+    if rewrite_of:
+        parent_candidate = database.get_redacao_document(rewrite_of) if ObjectId.is_valid(rewrite_of) else None
+        if not parent_candidate or parent_candidate.get("aluno") != student:
+            return jsonify({"error": "Redação de origem inválida"}), 403
 
     lines = essay.split('\n')
     title = lines[0] if lines else "Título não fornecido"
@@ -190,10 +247,13 @@ def post_model_response():
                 }}
             )
         except Exception as exc:
+            feedback_error = "Feedback textual indisponível no momento."
+            if should_expose_errors():
+                feedback_error = f"{feedback_error} Detalhe: {exc}"
             database.db.redacoes.update_one(
                 {"_id": essay_id},
                 {"$set": {
-                    "feedback_llm": f"Feedback textual indisponível no momento: {exc}",
+                    "feedback_llm": feedback_error,
                     "feedback_structured_source": "fallback",
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }}
@@ -201,18 +261,15 @@ def post_model_response():
 
     Thread(target=gerar_feedback).start()
 
-    response = jsonify({"grades": grades, "redacao_id": str(essay_id), "version_number": version_number})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    return jsonify({"grades": grades, "redacao_id": str(essay_id), "version_number": version_number})
 
 
 @app.post("/model_ocr")
+@require_role("aluno")
 def post_model_response_witht_ocr():
-    print("model_ocr")
     image = request.files['image']
-    print('imagem', image)
     id_theme = request.form.get('id')
-    student = request.form.get('aluno')
+    student = g.current_user["username"]
     class_id = request.form.get('class_id')
     activity_id = request.form.get('activity_id')
 
@@ -232,7 +289,9 @@ def post_model_response_witht_ocr():
     try:
         feedback_llm = get_llm_feedback(essay, grades, theme)
     except Exception as exc:
-        feedback_llm = f"Feedback textual indisponível no momento: {exc}"
+        feedback_llm = "Feedback textual indisponível no momento."
+        if should_expose_errors():
+            feedback_llm = f"{feedback_llm} Detalhe: {exc}"
 
     now = datetime.now(timezone.utc).isoformat()
     feedback_structured = build_structured_feedback(grades)
@@ -275,11 +334,8 @@ def post_model_response_witht_ocr():
     essays_collection = database.db.redacoes
     essays_collection.insert_one(essay_data).inserted_id
 
-    response = jsonify({"grades": obj})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-
     persist_essay(essay, obj)
-    return response
+    return jsonify({"grades": obj})
 
 
 @app.post("/userRegister")
@@ -317,25 +373,26 @@ def login():
         if bcrypt.checkpw(user_data['password'].encode('utf-8'), user['password']):
             return jsonify({
                 "tipoUsuario": user.get('tipoUsuario', 'usuario'),
-                "nomeUsuario": user.get('username')
+                "nomeUsuario": user.get('username'),
+                "token": create_token(user.get('username'), user.get('tipoUsuario', 'usuario'))
             }), 200
-        else:
-            return jsonify({"error": "Email ou senha incorretos"}), 401
+        return jsonify({"error": "E-mail ou senha inválidos"}), 401
 
-    return jsonify({"error": "Usuário não encontrado"}), 404
+    return jsonify({"error": "E-mail ou senha inválidos"}), 401
 
 
 @app.get("/users/alunos")
+@require_role("professor")
 def get_alunos():
     alunos = database.get_alunos()
-    response = jsonify(alunos)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-
-    return response
+    return jsonify(alunos)
 
 
 @app.get("/professores/<nome_professor>/analytics")
+@require_role("professor")
 def get_professor_analytics(nome_professor):
+    if nome_professor != g.current_user["username"]:
+        return jsonify({"error": "Acesso negado"}), 403
     class_id = request.args.get("class_id")
     activity_id = request.args.get("activity_id")
     group_by = request.args.get("group_by", "activity")
@@ -344,24 +401,24 @@ def get_professor_analytics(nome_professor):
 
 
 @app.get("/classes")
+@require_role("professor")
 def get_classes():
-    teacher = request.args.get("teacher")
-    if not teacher:
-        return jsonify({"error": "teacher é obrigatório"}), 400
+    teacher = g.current_user["username"]
 
     return jsonify(database.get_classes(teacher))
 
 
 @app.post("/classes")
+@require_role("professor")
 def create_class():
     data = request.json
-    if 'teacher' not in data or 'name' not in data:
+    if 'name' not in data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
     now = datetime.now(timezone.utc).isoformat()
     class_data = {
         "name": data.get("name"),
-        "teacher": data.get("teacher"),
+        "teacher": g.current_user["username"],
         "students": data.get("students", []),
         "created_at": now,
         "updated_at": now,
@@ -374,12 +431,14 @@ def create_class():
 
 
 @app.put("/classes/<id>")
+@require_role("professor")
 def update_class(id):
     try:
         data = request.json
-        teacher = data.get("teacher")
-        if teacher and not class_belongs_to_teacher(id, teacher):
+        teacher = g.current_user["username"]
+        if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+        data["teacher"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_class(id, data)
 
@@ -387,43 +446,51 @@ def update_class(id):
             return jsonify({"message": "Turma atualizada com sucesso!"}), 200
         return jsonify({"error": "Turma não encontrada"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao atualizar turma", 500, e)
 
 
 @app.delete("/classes/<id>")
+@require_role("professor")
 def delete_class(id):
     try:
-        teacher = request.args.get("teacher")
-        if teacher and not class_belongs_to_teacher(id, teacher):
+        teacher = g.current_user["username"]
+        if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
         result = database.delete_class(id)
         if result.deleted_count == 1:
             return jsonify({"message": "Turma deletada com sucesso!"}), 200
         return jsonify({"error": "Turma não encontrada"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao deletar turma", 500, e)
 
 
 @app.get("/activities")
+@require_role("professor")
 def get_activities():
-    teacher = request.args.get("teacher")
+    teacher = g.current_user["username"]
     class_id = request.args.get("class_id")
-    if not teacher:
-        return jsonify({"error": "teacher é obrigatório"}), 400
+    if class_id and not class_belongs_to_teacher(class_id, teacher):
+        return jsonify({"error": "Turma não pertence ao professor informado"}), 403
 
     return jsonify(database.get_activities(teacher, class_id))
 
 
 @app.post("/activities")
+@require_role("professor")
 def create_activity():
     data = request.json
-    if 'teacher' not in data or 'title' not in data or 'class_id' not in data or 'theme_id' not in data:
+    teacher = g.current_user["username"]
+    if 'title' not in data or 'class_id' not in data or 'theme_id' not in data:
         return jsonify({"error": "Dados insuficientes"}), 400
+    if not class_belongs_to_teacher(data.get("class_id"), teacher):
+        return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+    if not theme_belongs_to_teacher(data.get("theme_id"), teacher):
+        return jsonify({"error": "Tema não pertence ao professor informado"}), 403
 
     now = datetime.now(timezone.utc).isoformat()
     activity_data = {
         "title": data.get("title"),
-        "teacher": data.get("teacher"),
+        "teacher": teacher,
         "class_id": data.get("class_id"),
         "theme_id": data.get("theme_id"),
         "due_date": data.get("due_date", ""),
@@ -438,12 +505,18 @@ def create_activity():
 
 
 @app.put("/activities/<id>")
+@require_role("professor")
 def update_activity(id):
     try:
         data = request.json
-        teacher = data.get("teacher")
-        if teacher and not activity_belongs_to_teacher(id, teacher):
+        teacher = g.current_user["username"]
+        if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+        if data.get("class_id") and not class_belongs_to_teacher(data.get("class_id"), teacher):
+            return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+        if data.get("theme_id") and not theme_belongs_to_teacher(data.get("theme_id"), teacher):
+            return jsonify({"error": "Tema não pertence ao professor informado"}), 403
+        data["teacher"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_activity(id, data)
 
@@ -451,27 +524,29 @@ def update_activity(id):
             return jsonify({"message": "Atividade atualizada com sucesso!"}), 200
         return jsonify({"error": "Atividade não encontrada"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao atualizar atividade", 500, e)
 
 
 @app.delete("/activities/<id>")
+@require_role("professor")
 def delete_activity(id):
     try:
-        teacher = request.args.get("teacher")
-        if teacher and not activity_belongs_to_teacher(id, teacher):
+        teacher = g.current_user["username"]
+        if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
         result = database.delete_activity(id)
         if result.deleted_count == 1:
             return jsonify({"message": "Atividade deletada com sucesso!"}), 200
         return jsonify({"error": "Atividade não encontrada"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao deletar atividade", 500, e)
 
 
 @app.get("/activities/<id>/submissions")
+@require_role("professor")
 def get_activity_submissions(id):
-    teacher = request.args.get("teacher")
-    if teacher and not activity_belongs_to_teacher(id, teacher):
+    teacher = g.current_user["username"]
+    if not activity_belongs_to_teacher(id, teacher):
         return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
 
     if not ObjectId.is_valid(id):
@@ -485,24 +560,32 @@ def get_activity_submissions(id):
 
 
 @app.get("/temas")
+@require_auth
 def get_temas():
     temas = database.get_temas()
+    if g.current_user.get("tipoUsuario") == "professor":
+        temas = [tema for tema in temas if tema.get("nome_professor") == g.current_user["username"]]
     return jsonify(temas)
 
 
 @app.post("/temas")
+@require_role("professor")
 def create_tema():
     tema_data = request.json
-    if 'nome_professor' not in tema_data or 'tema' not in tema_data or 'descricao' not in tema_data:
+    if 'tema' not in tema_data or 'descricao' not in tema_data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
+    tema_data["nome_professor"] = g.current_user["username"]
     validate_required_fields("temas", tema_data)
     database.create_tema(tema_data)
     return jsonify({"message": "Tema criado com sucesso"}), 201
 
 
 @app.get("/students/<username>/activities")
+@require_role("aluno")
 def get_student_activities(username):
+    if username != g.current_user["username"]:
+        return jsonify({"error": "Acesso negado"}), 403
     classes = list(database.db.classes.find({"students": username}))
     class_ids = [str(item["_id"]) for item in classes]
     activities = list(database.db.activities.find({"class_id": {"$in": class_ids}}))
@@ -543,8 +626,14 @@ def get_student_activities(username):
 
 
 @app.put("/redacoes/<id>/rewrite-checklist")
+@require_role("aluno")
 def update_rewrite_checklist(id):
     try:
+        redacao, response = get_authorized_redacao_or_404(id)
+        if response:
+            return response
+        if redacao.get("aluno") != g.current_user["username"]:
+            return jsonify({"error": "Acesso negado"}), 403
         data = request.json
         state = data.get("rewrite_checklist_state", {})
         result = database.db.redacoes.update_one(
@@ -559,14 +648,18 @@ def update_rewrite_checklist(id):
             return jsonify({"message": "Checklist atualizado com sucesso!"}), 200
         return jsonify({"error": "Redação não encontrada"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao atualizar checklist", 500, e)
 
 
 @app.put("/temas/<id>")
+@require_role("professor")
 def update_tema(id):
     try:
+        if not theme_belongs_to_teacher(id, g.current_user["username"]):
+            return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)
         data = request.json
+        data["nome_professor"] = g.current_user["username"]
 
         result = database.update_tema(object_id, data)
 
@@ -578,12 +671,15 @@ def update_tema(id):
         else:
             return jsonify({"error": "Tema não encontrado"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao atualizar tema", 500, e)
 
 
 @app.delete("/temas/<id>")
+@require_role("professor")
 def delete_tema(id):
     try:
+        if not theme_belongs_to_teacher(id, g.current_user["username"]):
+            return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)
         result = database.delete_tema(object_id)
 
@@ -592,40 +688,59 @@ def delete_tema(id):
         else:
             return jsonify({"error": "Tema não encontrado"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao deletar tema", 500, e)
 
 
 @app.get("/redacoes")
+@require_auth
 def get_redacoes():
-    user_name = request.args.get("user")
-    redacoes = database.get_redacoes(user_name)
+    if g.current_user.get("tipoUsuario") == "aluno":
+        redacoes = database.get_redacoes(g.current_user["username"])
+    elif g.current_user.get("tipoUsuario") == "professor":
+        redacoes = database.get_redacoes_for_teacher(g.current_user["username"])
+    else:
+        redacoes = []
     return jsonify(redacoes)
 
 
 @app.post("/redacoes")
+@require_role("aluno")
 def create_redacao():
     redacao_data = request.json
     if 'titulo_redacao' not in redacao_data or 'id_tema' not in redacao_data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
+    redacao_data["aluno"] = g.current_user["username"]
     database.create_redacoes(redacao_data)
     return jsonify({"message": "Redação criada com sucesso"}), 201
 
 
 @app.get("/redacoes/<id>")
+@require_auth
 def get_redacao_by_id(id):
-    redacao = database.get_redacao_by_id(id)
-    return jsonify(redacao)
+    redacao, response = get_authorized_redacao_or_404(id)
+    if response:
+        return response
+    return jsonify(database.serialize_redacao(redacao))
 
 @app.get("/redacoes/<id>/versions")
+@require_auth
 def get_redacao_versions(id):
+    redacao, response = get_authorized_redacao_or_404(id)
+    if response:
+        return response
     redacoes = database.get_redacao_versions(id)
-    return jsonify(redacoes)
+    allowed = [item for item in redacoes if redacao_belongs_to_user(item, g.current_user)]
+    return jsonify(allowed)
 
 
 @app.put("/redacoes/<id>")
+@require_role("professor")
 def update_redacao(id):
     try:
+        redacao, response = get_authorized_redacao_or_404(id)
+        if response:
+            return response
         data = request.json
         result = database.update_redacao(id, data)
 
@@ -637,7 +752,7 @@ def update_redacao(id):
         else:
             return jsonify({"error": "Tema não encontrado"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_response("Erro ao atualizar redação", 500, e)
 
 
 if __name__ == "__main__":

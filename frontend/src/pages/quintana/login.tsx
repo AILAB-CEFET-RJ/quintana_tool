@@ -37,6 +37,7 @@ const Login = () => {
                 isLoggedIn: true,
                 tipoUsuario: data.tipoUsuario,
                 nomeUsuario: data.nomeUsuario,
+                token: data.token,
             }
 
             localStorage.setItem('authData', JSON.stringify(auth))

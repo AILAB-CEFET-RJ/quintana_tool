@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type React from 'react'
 import type { CSSProperties } from 'react'
 import { API_URL } from '@/config/config'
+import { authFetch, authHeaders } from '@/lib/authFetch'
 
 interface RewriteChecklistProps {
   redacao: any
@@ -38,9 +39,9 @@ const RewriteChecklist: React.FC<RewriteChecklistProps> = ({ redacao }) => {
 
     try {
       setIsSaving(true)
-      const response = await fetch(`${API_URL}/redacoes/${redacao._id}/rewrite-checklist`, {
+      const response = await authFetch(`${API_URL}/redacoes/${redacao._id}/rewrite-checklist`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ rewrite_checklist_state: nextState })
       })
 

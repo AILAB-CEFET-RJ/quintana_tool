@@ -16,6 +16,7 @@ import { getCompetencyScores } from '@/lib/competencias';
 import TeacherAnalyticsPanel from '@/components/teacherAnalytics/TeacherAnalyticsPanel';
 import TeacherClassActivityManager from '@/components/teacherAnalytics/TeacherClassActivityManager';
 import StudentActivitiesPanel from '@/components/studentInsights/StudentActivitiesPanel';
+import { authFetch } from '@/lib/authFetch';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -103,7 +104,7 @@ const Home = () => {
     const [selectedClassId, setSelectedClassId] = useState<string>('todos');
     const [selectedActivityId, setSelectedActivityId] = useState<string>('todos');
     const [analyticsGroupBy, setAnalyticsGroupBy] = useState<string>('activity');
-    const { isLoggedIn, tipoUsuario, nomeUsuario } = useAuth();
+    const { isLoggedIn, tipoUsuario, nomeUsuario, token } = useAuth();
 
     const handleTabChange = (key: string) => {
         setActiveKey(key);
@@ -121,8 +122,12 @@ const Home = () => {
 
     useEffect(() => {
         const fetchTemas = async () => {
+            if (!isLoggedIn || !token) {
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}/temas`);
+                const response = await authFetch(`${API_URL}/temas`);
                 const data = await response.json();
                 setTemasData(data);
             } catch (error) {
@@ -131,11 +136,11 @@ const Home = () => {
         };
 
         fetchTemas();
-    }, []);
+    }, [isLoggedIn, token]);
 
     useEffect(() => {
         const fetchRedacoes = async () => {
-            if (!isLoggedIn) {
+            if (!isLoggedIn || !token) {
                 return;
             }
 
@@ -147,7 +152,7 @@ const Home = () => {
                     }
                     url += `?user=${nomeUsuario}`
                 }
-                const response = await fetch(url);
+                const response = await authFetch(url);
                 if (!response.ok) {
                     throw new Error('Erro ao buscar redações');
                 }
@@ -159,12 +164,16 @@ const Home = () => {
         };
 
         fetchRedacoes();
-    }, [isLoggedIn, tipoUsuario, nomeUsuario]);
+    }, [isLoggedIn, tipoUsuario, nomeUsuario, token]);
 
     useEffect(() => {
         const fetchAlunos = async () => {
+            if (!isLoggedIn || !token || tipoUsuario !== 'professor') {
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}/users/alunos`);
+                const response = await authFetch(`${API_URL}/users/alunos`);
                 const data = await response.json();
                 setAlunos(data);
             } catch (error) {
@@ -173,7 +182,7 @@ const Home = () => {
         };
 
         fetchAlunos();
-    }, []);
+    }, [isLoggedIn, token, tipoUsuario]);
 
     useEffect(() => {
         const fetchTeacherAnalytics = async () => {
@@ -193,7 +202,7 @@ const Home = () => {
                 }
                 params.append('group_by', analyticsGroupBy);
                 const query = params.toString();
-                const response = await fetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics${query ? `?${query}` : ''}`);
+                const response = await authFetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics${query ? `?${query}` : ''}`);
                 if (!response.ok) {
                     throw new Error('Erro ao buscar análise da turma');
                 }
@@ -217,7 +226,7 @@ const Home = () => {
             }
 
             try {
-                const response = await fetch(`${API_URL}/students/${encodeURIComponent(nomeUsuario)}/activities`);
+                const response = await authFetch(`${API_URL}/students/${encodeURIComponent(nomeUsuario)}/activities`);
                 if (response.ok) {
                     setStudentActivities(await response.json());
                 }
@@ -236,8 +245,8 @@ const Home = () => {
 
         try {
             const [classesResponse, activitiesResponse] = await Promise.all([
-                fetch(`${API_URL}/classes?teacher=${encodeURIComponent(nomeUsuario)}`),
-                fetch(`${API_URL}/activities?teacher=${encodeURIComponent(nomeUsuario)}`)
+                authFetch(`${API_URL}/classes`),
+                authFetch(`${API_URL}/activities`)
             ]);
 
             if (classesResponse.ok) {
@@ -258,7 +267,7 @@ const Home = () => {
 
     const handleDeleteTema = async (id: string) => {
         try {
-            const response = await fetch(`${API_URL}/temas/${id}`, {
+            const response = await authFetch(`${API_URL}/temas/${id}`, {
                 method: 'DELETE'
             });
 

@@ -17,6 +17,12 @@ import random
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
+    from config import MONGO_DB_NAME, MONGO_URI
+except ImportError:
+    MONGO_URI = "mongodb://localhost:27017"
+    MONGO_DB_NAME = "textgrader"
+
+try:
     from pedagogy import build_structured_feedback
     HAS_PEDAGOGY = True
 except ImportError:
@@ -60,7 +66,7 @@ def gerar_data_iso(offset_dias: int = 0, hora: int = 12) -> str:
 
 
 class CorpusLoader:
-    def __init__(self, mongo_uri: str, seed_batch: str, db_name: str = "textgrader"):
+    def __init__(self, mongo_uri: str, seed_batch: str, db_name: str = MONGO_DB_NAME):
         self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.seed_batch = seed_batch
@@ -70,6 +76,31 @@ class CorpusLoader:
         self.turmas = {}
         self.alunos_por_turma = {}
         self.atividades_por_turma = {}
+
+    def criar_indices(self):
+        print("\n🔎 GARANTINDO ÍNDICES")
+        self.db.users.create_index("email")
+        self.db.users.create_index("username")
+        self.db.users.create_index("tipoUsuario")
+        self.db.users.create_index("seed_batch")
+        self.db.temas.create_index("nome_professor")
+        self.db.temas.create_index("seed_batch")
+        self.db.classes.create_index("teacher")
+        self.db.classes.create_index("students")
+        self.db.classes.create_index("seed_batch")
+        self.db.activities.create_index("teacher")
+        self.db.activities.create_index("class_id")
+        self.db.activities.create_index("theme_id")
+        self.db.activities.create_index("seed_batch")
+        self.db.redacoes.create_index("aluno")
+        self.db.redacoes.create_index("class_id")
+        self.db.redacoes.create_index("activity_id")
+        self.db.redacoes.create_index("id_tema")
+        self.db.redacoes.create_index("version_group_id")
+        self.db.redacoes.create_index("is_latest_version")
+        self.db.redacoes.create_index("created_at")
+        self.db.redacoes.create_index("seed_batch")
+        print("   ✅ Índices prontos")
 
     def limpar_dados_anteriores(self):
         print(f"\n🧹 Limpando dados anteriores com seed_batch: {self.seed_batch}")
@@ -445,10 +476,11 @@ class CorpusLoader:
 
 def main():
     parser = argparse.ArgumentParser(description='Carrega dados no MongoDB para o Quintana')
-    parser.add_argument('--input', nargs='+', required=True, help='Arquivos JSON de entrada')
-    parser.add_argument('--mongo-uri', default='mongodb://localhost:27017', help='URI do MongoDB')
+    parser.add_argument('--input', nargs='+', help='Arquivos JSON de entrada')
+    parser.add_argument('--mongo-uri', default=MONGO_URI, help='URI do MongoDB')
     parser.add_argument('--seed-batch', default='corpus_2026_01', help='Identificador do batch')
-    parser.add_argument('--db-name', default='textgrader', help='Nome do banco de dados')
+    parser.add_argument('--db-name', default=MONGO_DB_NAME, help='Nome do banco de dados')
+    parser.add_argument('--clear-only', action='store_true', help='Apenas remove dados do seed_batch informado')
     
     args = parser.parse_args()
     
@@ -456,6 +488,17 @@ def main():
     print("🚀 CARGA DE DADOS PARA O QUINTANA (Respeitando schemas.py)")
     print("=" * 70)
     
+    loader = CorpusLoader(args.mongo_uri, args.seed_batch, args.db_name)
+    loader.criar_indices()
+
+    if args.clear_only:
+        loader.limpar_dados_anteriores()
+        print("\n✅ Limpeza concluída.")
+        return
+
+    if not args.input:
+        parser.error("--input é obrigatório quando --clear-only não é usado")
+
     # Carregar corpus
     redacoes_por_tema = {}
     for arquivo in args.input:
@@ -474,7 +517,6 @@ def main():
     
     print(f"✅ {sum(len(v) for v in redacoes_por_tema.values())} redações em {len(redacoes_por_tema)} temas")
     
-    loader = CorpusLoader(args.mongo_uri, args.seed_batch, args.db_name)
     loader.limpar_dados_anteriores()
     loader.criar_usuarios()
     loader.criar_temas(redacoes_por_tema)

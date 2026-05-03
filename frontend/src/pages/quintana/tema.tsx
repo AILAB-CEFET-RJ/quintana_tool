@@ -6,6 +6,7 @@ import {API_URL} from "@/config/config";
 import PageShell from '@/components/ui/PageShell';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionPanel from '@/components/ui/SectionPanel';
+import { authFetch, authHeaders } from '@/lib/authFetch';
 
 const Tema = () => {
     const [salvarDesabilitado, setSalvarDesabilitado] = useState(true);
@@ -14,11 +15,11 @@ const Tema = () => {
 
     const handleCadastroTema = async (values: any) => {
         try {
-            const response = await fetch(`${API_URL}/temas`, {
+            const response = await authFetch(`${API_URL}/temas`, {
                 method: 'POST',
-                headers: {
+                headers: authHeaders({
                     'Content-Type': 'application/json',
-                },
+                }),
                 body: JSON.stringify({
                     nome_professor: nomeUsuario,
                     tema: values.nomeTema,

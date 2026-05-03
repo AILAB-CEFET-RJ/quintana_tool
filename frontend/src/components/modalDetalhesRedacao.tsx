@@ -12,6 +12,7 @@ import CompetencyFeedbackMap from './studentInsights/CompetencyFeedbackMap';
 import RewriteChecklist from './studentInsights/RewriteChecklist';
 import VersionComparison from './studentInsights/VersionComparison';
 import router from 'next/router';
+import { authFetch, authHeaders } from '@/lib/authFetch';
 
 
 interface RedacaoDetalhes {
@@ -50,7 +51,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
             }
 
             try {
-                const response = await fetch(`${API_URL}/redacoes/${redacao._id}/versions`);
+                const response = await authFetch(`${API_URL}/redacoes/${redacao._id}/versions`);
                 if (response.ok) {
                     const data = await response.json();
                     setVersions(data);
@@ -81,11 +82,11 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                 return
             }
             if (redacao && gradesEdited) {
-                const response = await fetch(`${API_URL}/redacoes/${redacao._id}`, {
+                const response = await authFetch(`${API_URL}/redacoes/${redacao._id}`, {
                     method: 'PUT',
-                    headers: {
+                    headers: authHeaders({
                         'Content-Type': 'application/json'
-                    },
+                    }),
                     body: JSON.stringify({
                         nota_competencia_1_professor: notaComp1Editada !== '' ? notaComp1Editada : 0,
                         nota_competencia_2_professor: notaComp2Editada !== '' ? notaComp2Editada : 0,

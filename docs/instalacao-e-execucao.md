@@ -71,7 +71,12 @@ python3 -m pip install -r requirements.txt
 Suba o backend:
 
 ```bash
-MONGO_URI=mongodb://localhost:27017 OPENAI_API_KEY=dummy python3 app.py
+MONGO_URI=mongodb://localhost:27017 \
+MONGO_DB_NAME=textgrader \
+CORS_ORIGINS=http://localhost:3000 \
+JWT_SECRET=troque-esta-chave \
+OPENAI_API_KEY=dummy \
+python3 app.py
 ```
 
 O backend ficará disponível em:
@@ -88,8 +93,11 @@ curl http://localhost:5000/
 
 A resposta esperada é:
 
-```text
-OK!
+```json
+{
+  "database": "connected",
+  "status": "ok"
+}
 ```
 
 ### Variáveis de ambiente do backend
@@ -98,7 +106,29 @@ Obrigatórias para cadastro, login, temas e persistência:
 
 ```bash
 MONGO_URI=mongodb://localhost:27017
+MONGO_DB_NAME=textgrader
+CORS_ORIGINS=http://localhost:3000
+JWT_SECRET=troque-esta-chave
+JWT_EXPIRATION_HOURS=8
 ```
+
+`MONGO_DB_NAME` permite usar bancos separados por oficina ou ambiente.
+
+`CORS_ORIGINS` restringe quais frontends podem chamar o backend. Para múltiplas origens, separe por vírgula:
+
+```bash
+CORS_ORIGINS=http://localhost:3000,http://192.168.0.20:3000
+```
+
+`JWT_SECRET` assina os tokens de login. Troque esse valor fora do modo demo.
+
+Para gerar uma chave local:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Use a string gerada no lugar de `troque-esta-chave`. Guarde esse valor fora do Git. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
 
 Obrigatória para geração real de feedback textual por LLM:
 
@@ -197,7 +227,12 @@ Depois:
 
 ```bash
 cd ~/ailab/quintana_tool/backend
-MONGO_URI=mongodb://localhost:27017 OPENAI_API_KEY=dummy python3 app.py
+MONGO_URI=mongodb://localhost:27017 \
+MONGO_DB_NAME=textgrader \
+CORS_ORIGINS=http://localhost:3000 \
+JWT_SECRET=troque-esta-chave \
+OPENAI_API_KEY=dummy \
+python3 app.py
 ```
 
 ### Frontend
@@ -286,6 +321,7 @@ E confirme se o backend foi iniciado com:
 
 ```bash
 MONGO_URI=mongodb://localhost:27017
+MONGO_DB_NAME=textgrader
 ```
 
 ### Feedback textual indisponível

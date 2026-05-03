@@ -5,6 +5,7 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { API_URL } from '@/config/config'
 import type { Tema } from '@/pages/quintana/home'
+import { authFetch, authHeaders } from '@/lib/authFetch'
 
 interface TeacherClassActivityManagerProps {
   teacher: string
@@ -30,8 +31,8 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
     if (!teacher) return
 
     const [classesResponse, activitiesResponse] = await Promise.all([
-      fetch(`${API_URL}/classes?teacher=${encodeURIComponent(teacher)}`),
-      fetch(`${API_URL}/activities?teacher=${encodeURIComponent(teacher)}`)
+      authFetch(`${API_URL}/classes`),
+      authFetch(`${API_URL}/activities`)
     ])
 
     if (classesResponse.ok) {
@@ -53,9 +54,9 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const createClass = async (values: any) => {
-    const response = await fetch(`${API_URL}/classes`, {
+    const response = await authFetch(`${API_URL}/classes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         teacher,
         name: values.name,
@@ -73,9 +74,9 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const createActivity = async (values: any) => {
-    const response = await fetch(`${API_URL}/activities`, {
+    const response = await authFetch(`${API_URL}/activities`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         teacher,
         title: values.title,
@@ -95,7 +96,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const deleteClass = async (id: string) => {
-    const response = await fetch(`${API_URL}/classes/${id}?teacher=${encodeURIComponent(teacher)}`, { method: 'DELETE' })
+    const response = await authFetch(`${API_URL}/classes/${id}`, { method: 'DELETE' })
     if (response.ok) {
       message.success('Turma removida.')
       notifyChanged()
@@ -105,7 +106,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const deleteActivity = async (id: string) => {
-    const response = await fetch(`${API_URL}/activities/${id}?teacher=${encodeURIComponent(teacher)}`, { method: 'DELETE' })
+    const response = await authFetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
     if (response.ok) {
       message.success('Atividade removida.')
       notifyChanged()
@@ -135,9 +136,9 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   const updateClass = async (values: any) => {
     if (!editingClass) return
 
-    const response = await fetch(`${API_URL}/classes/${editingClass._id}`, {
+    const response = await authFetch(`${API_URL}/classes/${editingClass._id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         teacher,
         name: values.name,
@@ -157,9 +158,9 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   const updateActivity = async (values: any) => {
     if (!editingActivity) return
 
-    const response = await fetch(`${API_URL}/activities/${editingActivity._id}`, {
+    const response = await authFetch(`${API_URL}/activities/${editingActivity._id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         teacher,
         title: values.title,
@@ -179,7 +180,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const openSubmissionStatus = async (record: any) => {
-    const response = await fetch(`${API_URL}/activities/${record._id}/submissions?teacher=${encodeURIComponent(teacher)}`)
+    const response = await authFetch(`${API_URL}/activities/${record._id}/submissions`)
 
     if (response.ok) {
       setSubmissionStatus(await response.json())

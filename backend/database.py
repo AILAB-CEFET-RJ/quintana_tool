@@ -2,16 +2,16 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from bson import ObjectId
 import certifi
-import os
+from config import MONGO_DB_NAME, MONGO_URI
 
-mongo_uri = os.getenv('MONGO_URI')
+mongo_uri = MONGO_URI
 
 mongo_options = {"serverSelectionTimeoutMS": 20000}
 if mongo_uri and (mongo_uri.startswith("mongodb+srv://") or "mongodb.net" in mongo_uri):
     mongo_options.update({"tls": True, "tlsCAFile": certifi.where()})
 
 client = MongoClient(mongo_uri, **mongo_options)
-db = client.textgrader
+db = client[MONGO_DB_NAME]
 
 
 def check_db_connection():
@@ -66,6 +66,7 @@ def get_alunos():
 
 def serialize_document(document):
     document['_id'] = str(document['_id'])
+    document.pop('password', None)
     return document
 
 def update_tema(id, data):
@@ -144,6 +145,18 @@ def get_redacoes(user_name):
         redacao['_id'] = str(redacao['_id'])
     return redacoes
 
+def get_redacoes_for_teacher(teacher):
+    theme_ids = [str(item["_id"]) for item in db.temas.find({"nome_professor": teacher}, {"_id": 1})]
+    class_ids = [str(item["_id"]) for item in db.classes.find({"teacher": teacher}, {"_id": 1})]
+    activity_ids = [str(item["_id"]) for item in db.activities.find({"teacher": teacher}, {"_id": 1})]
+    query = {"$or": [
+        {"id_tema": {"$in": theme_ids}},
+        {"class_id": {"$in": class_ids}},
+        {"activity_id": {"$in": activity_ids}},
+    ]}
+    redacoes = list(db.redacoes.find(query))
+    return [serialize_redacao(item) for item in redacoes]
+
 def create_redacoes(data):
     redacoes_collection = db.redacoes
     redacoes_collection.insert_one(data)
@@ -160,6 +173,7 @@ def get_redacao_document(id):
 
 def serialize_redacao(redacao):
     redacao['_id'] = str(redacao['_id'])
+    redacao.pop('password', None)
     return redacao
 
 def get_redacao_versions(id):

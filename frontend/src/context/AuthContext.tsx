@@ -12,10 +12,12 @@ interface AuthContextType {
   isLoggedIn: boolean;
   tipoUsuario: string;
   nomeUsuario: string;
+  token: string;
   setAuthData: Dispatch<SetStateAction<{
     isLoggedIn: boolean;
     tipoUsuario: string;
     nomeUsuario: string;
+    token: string;
   }>>;
 }
 
@@ -26,16 +28,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isLoggedIn: boolean;
     tipoUsuario: string;
     nomeUsuario: string;
+    token: string;
   }>({
     isLoggedIn: false,
     tipoUsuario: '',
     nomeUsuario: '',
+    token: '',
   });
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('authData');
     if (storedAuth) {
-      setAuthData(JSON.parse(storedAuth));
+      const parsedAuth = JSON.parse(storedAuth);
+      if (parsedAuth.isLoggedIn && !parsedAuth.token) {
+        localStorage.removeItem('authData');
+        return;
+      }
+      setAuthData(parsedAuth);
     }
   }, []);
 

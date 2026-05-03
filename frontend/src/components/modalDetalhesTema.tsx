@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Tema } from '@/pages/quintana/home';
 import { useAuth } from '@/context';
 import { API_URL } from "@/config/config";
+import { authFetch, authHeaders } from '@/lib/authFetch';
 
 interface TemaDetalhes {
     open: boolean;
@@ -19,11 +20,11 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
     const handleEditarTema = async () => {
         try {
             if (tema && (descricaoEditada !== '' || temaEditado !== '')) {
-                const response = await fetch(`${API_URL}/temas/${tema._id}`, {
+                const response = await authFetch(`${API_URL}/temas/${tema._id}`, {
                     method: 'PUT',
-                    headers: {
+                    headers: authHeaders({
                         'Content-Type': 'application/json'
-                    },
+                    }),
                     body: JSON.stringify({
                         tema: temaEditado !== '' ? temaEditado : tema.tema,
                         descricao: descricaoEditada !== '' ? descricaoEditada : tema.descricao,

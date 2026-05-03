@@ -8,6 +8,7 @@ import { S } from '@/styles/Redacao.styles'
 import { useAuth } from '../../context';
 import { API_URL } from "@/config/config";
 import { CSSProperties } from 'react'
+import { authFetch, authHeaders } from '@/lib/authFetch'
 
 
 const Redacao = () => {
@@ -51,11 +52,11 @@ const Redacao = () => {
       rewrite_of: rewriteOf || null,
       class_id: classId || null,
       activity_id: activityId || null
+    }, {
+      headers: authHeaders()
     })
 
     const data = response.data
-    console.log(data.grades)
-
     setEssayGrade(data.grades)
   }
 
@@ -84,8 +85,9 @@ const Redacao = () => {
     formData.append('activity_id', activityId ? activityId.toString() : '')
 
     try {
-      const response = await axios.post(`${API_URL}/model2`, formData, {
+      const response = await axios.post(`${API_URL}/model_ocr`, formData, {
         headers: {
+          ...authHeaders(),
           'Content-Type': 'multipart/form-data'
         }
       })
@@ -131,7 +133,7 @@ const Redacao = () => {
       }
 
       try {
-        const response = await fetch(`${API_URL}/temas`)
+        const response = await authFetch(`${API_URL}/temas`)
         if (response.ok) {
           const temas = await response.json()
           const temaAtual = temas.find((item: any) => item._id === id)

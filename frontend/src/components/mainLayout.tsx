@@ -31,6 +31,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             isLoggedIn: false,
             tipoUsuario: '',
             nomeUsuario: '',
+            token: '',
         })
 
         router.push('/quintana/login')
