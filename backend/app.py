@@ -9,6 +9,7 @@ from schemas import validate_required_fields
 from flask_cors import CORS
 from config import get_cors_origins, should_expose_errors
 from auth import create_token, require_auth, require_role
+from analytics_cache import get_cached_analytics, invalidate_teacher_analytics, set_cached_analytics
 import bcrypt
 import os
 from threading import Thread
@@ -78,6 +79,33 @@ def get_authorized_redacao_or_404(id):
         return None, (jsonify({"error": "Acesso negado"}), 403)
 
     return redacao, None
+
+
+def invalidate_analytics_for_redacao(redacao):
+    if not redacao:
+        return
+
+    teachers = set()
+    theme_id = redacao.get("id_tema")
+    if theme_id and ObjectId.is_valid(theme_id):
+        theme = database.db.temas.find_one({"_id": ObjectId(theme_id)}, {"nome_professor": 1})
+        if theme and theme.get("nome_professor"):
+            teachers.add(theme["nome_professor"])
+
+    class_id = redacao.get("class_id")
+    if class_id and ObjectId.is_valid(class_id):
+        class_doc = database.db.classes.find_one({"_id": ObjectId(class_id)}, {"teacher": 1})
+        if class_doc and class_doc.get("teacher"):
+            teachers.add(class_doc["teacher"])
+
+    activity_id = redacao.get("activity_id")
+    if activity_id and ObjectId.is_valid(activity_id):
+        activity = database.db.activities.find_one({"_id": ObjectId(activity_id)}, {"teacher": 1})
+        if activity and activity.get("teacher"):
+            teachers.add(activity["teacher"])
+
+    for teacher in teachers:
+        invalidate_teacher_analytics(teacher)
 
 
 def build_activity_submission_status(activity_id):
@@ -232,6 +260,7 @@ def post_model_response():
         )
 
     essay_id = database.db.redacoes.insert_one(essay_data).inserted_id
+    invalidate_analytics_for_redacao(essay_data)
 
     def gerar_feedback():
         try:
@@ -333,6 +362,7 @@ def post_model_response_witht_ocr():
 
     essays_collection = database.db.redacoes
     essays_collection.insert_one(essay_data).inserted_id
+    invalidate_analytics_for_redacao(essay_data)
 
     persist_essay(essay, obj)
     return jsonify({"grades": obj})
@@ -396,8 +426,15 @@ def get_professor_analytics(nome_professor):
     class_id = request.args.get("class_id")
     activity_id = request.args.get("activity_id")
     group_by = request.args.get("group_by", "activity")
+    if class_id and not class_belongs_to_teacher(class_id, nome_professor):
+        return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+    if activity_id and not activity_belongs_to_teacher(activity_id, nome_professor):
+        return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+    cached = get_cached_analytics(nome_professor, class_id, activity_id, group_by)
+    if cached:
+        return jsonify(cached)
     analytics = build_teacher_analytics(nome_professor, class_id, activity_id, group_by)
-    return jsonify(analytics)
+    return jsonify(set_cached_analytics(nome_professor, class_id, activity_id, group_by, analytics))
 
 
 @app.get("/classes")
@@ -426,6 +463,7 @@ def create_class():
     }
     validate_required_fields("classes", class_data)
     inserted_id = database.create_class(class_data).inserted_id
+    invalidate_teacher_analytics(g.current_user["username"])
     class_data["_id"] = str(inserted_id)
     return jsonify(class_data), 201
 
@@ -441,6 +479,7 @@ def update_class(id):
         data["teacher"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_class(id, data)
+        invalidate_teacher_analytics(teacher)
 
         if result.matched_count == 1:
             return jsonify({"message": "Turma atualizada com sucesso!"}), 200
@@ -457,6 +496,7 @@ def delete_class(id):
         if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
         result = database.delete_class(id)
+        invalidate_teacher_analytics(teacher)
         if result.deleted_count == 1:
             return jsonify({"message": "Turma deletada com sucesso!"}), 200
         return jsonify({"error": "Turma não encontrada"}), 404
@@ -500,6 +540,7 @@ def create_activity():
     }
     validate_required_fields("activities", activity_data)
     inserted_id = database.create_activity(activity_data).inserted_id
+    invalidate_teacher_analytics(teacher)
     activity_data["_id"] = str(inserted_id)
     return jsonify(activity_data), 201
 
@@ -519,6 +560,7 @@ def update_activity(id):
         data["teacher"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_activity(id, data)
+        invalidate_teacher_analytics(teacher)
 
         if result.matched_count == 1:
             return jsonify({"message": "Atividade atualizada com sucesso!"}), 200
@@ -535,6 +577,7 @@ def delete_activity(id):
         if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
         result = database.delete_activity(id)
+        invalidate_teacher_analytics(teacher)
         if result.deleted_count == 1:
             return jsonify({"message": "Atividade deletada com sucesso!"}), 200
         return jsonify({"error": "Atividade não encontrada"}), 404
@@ -578,6 +621,7 @@ def create_tema():
     tema_data["nome_professor"] = g.current_user["username"]
     validate_required_fields("temas", tema_data)
     database.create_tema(tema_data)
+    invalidate_teacher_analytics(g.current_user["username"])
     return jsonify({"message": "Tema criado com sucesso"}), 201
 
 
@@ -662,6 +706,7 @@ def update_tema(id):
         data["nome_professor"] = g.current_user["username"]
 
         result = database.update_tema(object_id, data)
+        invalidate_teacher_analytics(g.current_user["username"])
 
         if result.matched_count == 1:
             if result.modified_count == 1:
@@ -682,6 +727,7 @@ def delete_tema(id):
             return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)
         result = database.delete_tema(object_id)
+        invalidate_teacher_analytics(g.current_user["username"])
 
         if result.deleted_count == 1:
             return jsonify({"message": "Tema deletado com sucesso!"}), 200
@@ -694,12 +740,15 @@ def delete_tema(id):
 @app.get("/redacoes")
 @require_auth
 def get_redacoes():
+    page = request.args.get("page", 1)
+    page_size = request.args.get("page_size", 20)
     if g.current_user.get("tipoUsuario") == "aluno":
-        redacoes = database.get_redacoes(g.current_user["username"])
+        redacoes = database.get_redacoes_page_for_student(g.current_user["username"], page, page_size)
     elif g.current_user.get("tipoUsuario") == "professor":
-        redacoes = database.get_redacoes_for_teacher(g.current_user["username"])
+        student = request.args.get("student")
+        redacoes = database.get_redacoes_page_for_teacher(g.current_user["username"], page, page_size, student)
     else:
-        redacoes = []
+        redacoes = {"items": [], "page": int(page), "page_size": int(page_size), "total": 0}
     return jsonify(redacoes)
 
 
@@ -742,7 +791,9 @@ def update_redacao(id):
         if response:
             return response
         data = request.json
+        redacao_before = database.get_redacao_document(id)
         result = database.update_redacao(id, data)
+        invalidate_analytics_for_redacao(redacao_before)
 
         if result.matched_count == 1:
             if result.modified_count == 1:

@@ -37,6 +37,7 @@ Obs.: Certifique-se de que a porta do MongoDB está acessível e que o Docker es
 - [Arquitetura das funcionalidades para professores](docs/arquitetura-funcionalidades-professor.md)
 - [Esquema lógico do banco de dados](docs/esquema-banco.md)
 - [Segurança para oficinas](docs/seguranca-oficinas.md)
+- [Checklist operacional de oficina](docs/checklist-oficina.md)
 
 
 ## 📄 Licença

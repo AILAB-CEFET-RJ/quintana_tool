@@ -75,6 +75,7 @@ MONGO_URI=mongodb://localhost:27017 \
 MONGO_DB_NAME=textgrader \
 CORS_ORIGINS=http://localhost:3000 \
 JWT_SECRET=troque-esta-chave \
+ANALYTICS_CACHE_TTL_SECONDS=300 \
 OPENAI_API_KEY=dummy \
 python3 app.py
 ```
@@ -110,6 +111,7 @@ MONGO_DB_NAME=textgrader
 CORS_ORIGINS=http://localhost:3000
 JWT_SECRET=troque-esta-chave
 JWT_EXPIRATION_HOURS=8
+ANALYTICS_CACHE_TTL_SECONDS=300
 ```
 
 `MONGO_DB_NAME` permite usar bancos separados por oficina ou ambiente.
@@ -129,6 +131,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Use a string gerada no lugar de `troque-esta-chave`. Guarde esse valor fora do Git. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
+
+`ANALYTICS_CACHE_TTL_SECONDS` controla por quantos segundos o backend reaproveita o resultado dos painéis de análise do professor. Use `0` para desabilitar o cache.
 
 Obrigatória para geração real de feedback textual por LLM:
 
@@ -177,6 +181,8 @@ Para executar a versão de produção local:
 npm run build
 npm run start
 ```
+
+Para oficinas com vários acessos simultâneos, prefira `npm run build` seguido de `npm run start`. Evite `npm run dev`, pois ele recompila páginas sob demanda e pode ficar mais lento.
 
 O frontend ficará disponível em:
 
@@ -231,6 +237,7 @@ MONGO_URI=mongodb://localhost:27017 \
 MONGO_DB_NAME=textgrader \
 CORS_ORIGINS=http://localhost:3000 \
 JWT_SECRET=troque-esta-chave \
+ANALYTICS_CACHE_TTL_SECONDS=300 \
 OPENAI_API_KEY=dummy \
 python3 app.py
 ```

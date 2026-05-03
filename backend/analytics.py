@@ -11,6 +11,25 @@ COMPETENCIES = [
     {"code": "C5", "title": "Intervenção", "field": "nota_competencia_5_model"},
 ]
 
+ANALYTICS_PROJECTION = {
+    "titulo": 1,
+    "nota_total": 1,
+    "id_tema": 1,
+    "aluno": 1,
+    "nota_competencia_1_model": 1,
+    "nota_competencia_2_model": 1,
+    "nota_competencia_3_model": 1,
+    "nota_competencia_4_model": 1,
+    "nota_competencia_5_model": 1,
+    "created_at": 1,
+    "submitted_at": 1,
+    "version_group_id": 1,
+    "version_number": 1,
+    "class_id": 1,
+    "activity_id": 1,
+    "is_latest_version": 1,
+}
+
 
 def score(redacao, field):
     try:
@@ -33,7 +52,10 @@ def serialize_id(value):
 
 
 def theme_map_for_professor(professor_name):
-    temas = list(database.db.temas.find({"nome_professor": professor_name}))
+    temas = list(database.db.temas.find(
+        {"nome_professor": professor_name},
+        {"tema": 1, "nome_professor": 1}
+    ))
     return {
         str(tema["_id"]): {
             "_id": str(tema["_id"]),
@@ -46,15 +68,21 @@ def theme_map_for_professor(professor_name):
 
 def teacher_essays(professor_name, class_id=None, activity_id=None):
     temas = theme_map_for_professor(professor_name)
-    query = {"id_tema": {"$in": list(temas.keys())}}
+    class_ids = [str(item["_id"]) for item in database.db.classes.find({"teacher": professor_name}, {"_id": 1})]
+    activity_ids = [str(item["_id"]) for item in database.db.activities.find({"teacher": professor_name}, {"_id": 1})]
+    query = {"$or": [
+        {"id_tema": {"$in": list(temas.keys())}},
+        {"class_id": {"$in": class_ids}},
+        {"activity_id": {"$in": activity_ids}},
+    ]}
 
     if class_id:
-        query["class_id"] = class_id
+        query = {"$and": [query, {"class_id": class_id}]}
 
     if activity_id:
-        query["activity_id"] = activity_id
+        query = {"$and": [query, {"activity_id": activity_id}]}
 
-    redacoes = list(database.db.redacoes.find(query))
+    redacoes = list(database.db.redacoes.find(query, ANALYTICS_PROJECTION))
     return redacoes, temas
 
 
@@ -484,7 +512,8 @@ def build_teacher_analytics(professor_name, class_id=None, activity_id=None, gro
     heatmap = build_heatmap(latest_redacoes)
     groups = build_groups(heatmap)
     evolution = build_evolution(latest_redacoes, temas, group_by)
-    theme_performance = build_theme_performance(build_evolution(latest_redacoes, temas, "theme"))
+    theme_evolution = evolution if group_by == "theme" else build_evolution(latest_redacoes, temas, "theme")
+    theme_performance = build_theme_performance(theme_evolution)
     alerts = build_alerts(latest_redacoes, distribution, heatmap, class_id, activity_id, evolution)
 
     return {

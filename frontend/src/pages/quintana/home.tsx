@@ -88,6 +88,9 @@ const Home = () => {
     const [activeKey, setActiveKey] = useState<string>('1');
     const [temasData, setTemasData] = useState<Tema[]>([]);
     const [redacoesData, setRedacoesData] = useState<Redacao[]>([]);
+    const [redacoesTotal, setRedacoesTotal] = useState(0);
+    const [redacoesPage, setRedacoesPage] = useState(1);
+    const [redacoesPageSize, setRedacoesPageSize] = useState(20);
     const [alunos, setAlunos] = useState<any[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [redacaoModalVisible, setRedacaoModalVisible] = useState(false);
@@ -115,9 +118,18 @@ const Home = () => {
         setModalVisible(true);
     };
 
-    const openRedacaoModal = (redacao: any) => {
+    const openRedacaoModal = async (redacao: any) => {
         setSelectedRedacao(redacao);
         setRedacaoModalVisible(true);
+
+        try {
+            const response = await authFetch(`${API_URL}/redacoes/${redacao._id}`);
+            if (response.ok) {
+                setSelectedRedacao(await response.json());
+            }
+        } catch (error) {
+            console.error('Erro ao buscar detalhes da redação:', error);
+        }
     };
 
     useEffect(() => {
@@ -145,26 +157,27 @@ const Home = () => {
             }
 
             try {
-                let url = `${API_URL}/redacoes`
-                if (tipoUsuario === 'aluno') {
-                    if (!nomeUsuario) {
-                        return;
-                    }
-                    url += `?user=${nomeUsuario}`
+                const params = new URLSearchParams();
+                params.append('page', String(redacoesPage));
+                params.append('page_size', String(redacoesPageSize));
+                if (tipoUsuario === 'professor' && filterAluno !== 'todos') {
+                    params.append('student', filterAluno);
                 }
+                const url = `${API_URL}/redacoes?${params.toString()}`
                 const response = await authFetch(url);
                 if (!response.ok) {
                     throw new Error('Erro ao buscar redações');
                 }
                 const data = await response.json();
-                setRedacoesData(data);
+                setRedacoesData(data.items || []);
+                setRedacoesTotal(data.total || 0);
             } catch (error) {
                 console.error('Erro ao buscar as redações:', error);
             }
         };
 
         fetchRedacoes();
-    }, [isLoggedIn, tipoUsuario, nomeUsuario, token]);
+    }, [isLoggedIn, tipoUsuario, token, redacoesPage, redacoesPageSize, filterAluno]);
 
     useEffect(() => {
         const fetchAlunos = async () => {
@@ -186,7 +199,7 @@ const Home = () => {
 
     useEffect(() => {
         const fetchTeacherAnalytics = async () => {
-            if (tipoUsuario !== 'professor' || !nomeUsuario) {
+            if (tipoUsuario !== 'professor' || !nomeUsuario || activeKey !== '3') {
                 return;
             }
 
@@ -217,11 +230,11 @@ const Home = () => {
         };
 
         fetchTeacherAnalytics();
-    }, [tipoUsuario, nomeUsuario, redacoesData.length, temasData.length, selectedClassId, selectedActivityId, analyticsGroupBy]);
+    }, [tipoUsuario, nomeUsuario, activeKey, selectedClassId, selectedActivityId, analyticsGroupBy]);
 
     useEffect(() => {
         const fetchStudentActivities = async () => {
-            if (tipoUsuario !== 'aluno' || !nomeUsuario) {
+            if (tipoUsuario !== 'aluno' || !nomeUsuario || activeKey !== '3') {
                 return;
             }
 
@@ -236,10 +249,10 @@ const Home = () => {
         };
 
         fetchStudentActivities();
-    }, [tipoUsuario, nomeUsuario, redacoesData.length]);
+    }, [tipoUsuario, nomeUsuario, activeKey]);
 
     const fetchTeacherStructure = async () => {
-        if (tipoUsuario !== 'professor' || !nomeUsuario) {
+        if (tipoUsuario !== 'professor' || !nomeUsuario || (activeKey !== '3' && activeKey !== '4')) {
             return;
         }
 
@@ -263,7 +276,7 @@ const Home = () => {
 
     useEffect(() => {
         fetchTeacherStructure();
-    }, [tipoUsuario, nomeUsuario]);
+    }, [tipoUsuario, nomeUsuario, activeKey]);
 
     const handleDeleteTema = async (id: string) => {
         try {
@@ -415,7 +428,7 @@ const Home = () => {
                     <Col xs={24} sm={12} lg={6}>
                         <Tooltip title={summaryTooltips.redacoes}>
                             <Card bordered={false} style={{ borderRadius: 8 }}>
-                                <Statistic title="Redações" value={visibleRedacoes.length} prefix={<FileTextOutlined />} />
+                                <Statistic title="Redações" value={redacoesTotal || visibleRedacoes.length} prefix={<FileTextOutlined />} />
                             </Card>
                         </Tooltip>
                     </Col>
@@ -477,7 +490,14 @@ const Home = () => {
                             </Select>
                         )}
                         {tipoUsuario === 'professor' && (
-                            <Select defaultValue="todos" style={{ width: 200 }} onChange={value => setFilterAluno(value)}>
+                            <Select
+                                defaultValue="todos"
+                                style={{ width: 200 }}
+                                onChange={value => {
+                                    setFilterAluno(value);
+                                    setRedacoesPage(1);
+                                }}
+                            >
                                 <Option value="todos">Todos os Alunos</Option>
                                 {alunos.map(aluno => (
                                     <Option key={aluno._id} value={aluno.username}>
@@ -503,6 +523,16 @@ const Home = () => {
                         <CustomTable
                             dataSource={visibleRedacoes}
                             columns={redacaoColumns}
+                            pagination={{
+                                current: redacoesPage,
+                                pageSize: redacoesPageSize,
+                                total: redacoesTotal,
+                                showSizeChanger: true,
+                            }}
+                            onChange={(pagination) => {
+                                setRedacoesPage(pagination.current || 1);
+                                setRedacoesPageSize(pagination.pageSize || 20);
+                            }}
                         />
                     }
                 </TabPane>

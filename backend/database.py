@@ -13,6 +13,34 @@ if mongo_uri and (mongo_uri.startswith("mongodb+srv://") or "mongodb.net" in mon
 client = MongoClient(mongo_uri, **mongo_options)
 db = client[MONGO_DB_NAME]
 
+REDACAO_LIST_PROJECTION = {
+    "titulo": 1,
+    "nota_total": 1,
+    "id_tema": 1,
+    "aluno": 1,
+    "nota_competencia_1_model": 1,
+    "nota_competencia_2_model": 1,
+    "nota_competencia_3_model": 1,
+    "nota_competencia_4_model": 1,
+    "nota_competencia_5_model": 1,
+    "nota_professor": 1,
+    "nota_competencia_1_professor": 1,
+    "nota_competencia_2_professor": 1,
+    "nota_competencia_3_professor": 1,
+    "nota_competencia_4_professor": 1,
+    "nota_competencia_5_professor": 1,
+    "created_at": 1,
+    "updated_at": 1,
+    "submitted_at": 1,
+    "version_group_id": 1,
+    "parent_redacao_id": 1,
+    "version_number": 1,
+    "class_id": 1,
+    "activity_id": 1,
+    "correction_source": 1,
+    "is_latest_version": 1,
+}
+
 
 def check_db_connection():
     try:
@@ -145,17 +173,50 @@ def get_redacoes(user_name):
         redacao['_id'] = str(redacao['_id'])
     return redacoes
 
-def get_redacoes_for_teacher(teacher):
+def paginate_redacoes(query, page=1, page_size=20, projection=None):
+    page = max(int(page or 1), 1)
+    page_size = min(max(int(page_size or 20), 1), 100)
+    skip = (page - 1) * page_size
+    projection = projection or REDACAO_LIST_PROJECTION
+    cursor = (
+        db.redacoes
+        .find(query, projection)
+        .sort([("created_at", -1), ("_id", -1)])
+        .skip(skip)
+        .limit(page_size)
+    )
+    items = [serialize_redacao(item) for item in cursor]
+    total = db.redacoes.count_documents(query)
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
+
+def teacher_redacoes_query(teacher):
     theme_ids = [str(item["_id"]) for item in db.temas.find({"nome_professor": teacher}, {"_id": 1})]
     class_ids = [str(item["_id"]) for item in db.classes.find({"teacher": teacher}, {"_id": 1})]
     activity_ids = [str(item["_id"]) for item in db.activities.find({"teacher": teacher}, {"_id": 1})]
-    query = {"$or": [
+    return {"$or": [
         {"id_tema": {"$in": theme_ids}},
         {"class_id": {"$in": class_ids}},
         {"activity_id": {"$in": activity_ids}},
     ]}
+
+def get_redacoes_page_for_student(student, page=1, page_size=20):
+    return paginate_redacoes({"aluno": student}, page, page_size)
+
+def get_redacoes_for_teacher(teacher):
+    query = teacher_redacoes_query(teacher)
     redacoes = list(db.redacoes.find(query))
     return [serialize_redacao(item) for item in redacoes]
+
+def get_redacoes_page_for_teacher(teacher, page=1, page_size=20, student=None):
+    query = teacher_redacoes_query(teacher)
+    if student:
+        query = {"$and": [query, {"aluno": student}]}
+    return paginate_redacoes(query, page, page_size)
 
 def create_redacoes(data):
     redacoes_collection = db.redacoes

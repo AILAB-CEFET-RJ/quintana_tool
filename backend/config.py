@@ -8,6 +8,7 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "textgrader")
 JWT_SECRET = os.getenv("JWT_SECRET", "quintana-demo-secret")
 JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "8"))
+ANALYTICS_CACHE_TTL_SECONDS = int(os.getenv("ANALYTICS_CACHE_TTL_SECONDS", "300"))
 
 
 def get_cors_origins():
