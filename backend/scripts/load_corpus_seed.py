@@ -60,7 +60,7 @@ def gerar_data_iso(offset_dias: int = 0, hora: int = 12) -> str:
 
 
 class CorpusLoader:
-    def __init__(self, mongo_uri: str, seed_batch: str, db_name: str = "quintana"):
+    def __init__(self, mongo_uri: str, seed_batch: str, db_name: str = "textgrader"):
         self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.seed_batch = seed_batch
@@ -448,7 +448,7 @@ def main():
     parser.add_argument('--input', nargs='+', required=True, help='Arquivos JSON de entrada')
     parser.add_argument('--mongo-uri', default='mongodb://localhost:27017', help='URI do MongoDB')
     parser.add_argument('--seed-batch', default='corpus_2026_01', help='Identificador do batch')
-    parser.add_argument('--db-name', default='quintana', help='Nome do banco de dados')
+    parser.add_argument('--db-name', default='textgrader', help='Nome do banco de dados')
     
     args = parser.parse_args()
     
@@ -494,7 +494,7 @@ def main():
     
     print(f"\n🔑 Senha padrão: {SENHA_PADRAO}")
     print("   Professores: prof_mariana, prof_rafael, prof_carla")
-    print("   Alunos: aluno001 a aluno150")
+    print("   Alunos: aluno001 a aluno120")
 
 
 if __name__ == "__main__":

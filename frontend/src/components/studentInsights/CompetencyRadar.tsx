@@ -4,6 +4,8 @@ import type { CSSProperties } from 'react'
 
 interface CompetencyRadarProps {
   redacao: any
+  title?: string
+  subtitle?: string
 }
 
 const size = 280
@@ -27,15 +29,19 @@ const guidePointFor = (index: number, radius: number) => {
   }
 }
 
-const CompetencyRadar: React.FC<CompetencyRadarProps> = ({ redacao }) => {
+const CompetencyRadar: React.FC<CompetencyRadarProps> = ({
+  redacao,
+  title = 'Radar das competências',
+  subtitle = 'Comparação rápida das cinco habilidades avaliadas.'
+}) => {
   const scores = getCompetencyScores(redacao)
   const polygon = scores.map((item, index) => pointFor(index, item.score)).map((point) => `${point.x},${point.y}`).join(' ')
 
   return (
     <section style={styles.card}>
       <div>
-        <h3 style={styles.title}>Radar das competências</h3>
-        <p style={styles.subtitle}>Comparação rápida das cinco habilidades avaliadas.</p>
+        <h3 style={styles.title}>{title}</h3>
+        <p style={styles.subtitle}>{subtitle}</p>
       </div>
       <div style={styles.content}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Radar das cinco competências">

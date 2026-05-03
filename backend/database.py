@@ -6,7 +6,11 @@ import os
 
 mongo_uri = os.getenv('MONGO_URI')
 
-client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=20000)
+mongo_options = {"serverSelectionTimeoutMS": 20000}
+if mongo_uri and (mongo_uri.startswith("mongodb+srv://") or "mongodb.net" in mongo_uri):
+    mongo_options.update({"tls": True, "tlsCAFile": certifi.where()})
+
+client = MongoClient(mongo_uri, **mongo_options)
 db = client.textgrader
 
 

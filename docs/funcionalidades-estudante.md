@@ -16,13 +16,29 @@ Ele permite responder rapidamente:
 - quais competências precisam de mais atenção;
 - se a nota está equilibrada ou concentrada em poucas habilidades.
 
-O radar é exibido no modal de detalhes da redação, na aba `Resumo`.
+Há duas leituras complementares:
+
+- na aba `Minhas redações`, o radar mostra a média das competências do estudante, considerando as redações mais recentes de cada sequência de versões;
+- no modal de detalhes da redação, na aba `Resumo`, o radar mostra as competências daquela redação específica.
+
+Essa separação permite usar a página principal como diagnóstico longitudinal e o modal como diagnóstico pontual.
 
 ## Linha do tempo de progresso
 
 A linha do tempo aparece na aba `Redações`, para usuários do tipo estudante.
 
-Ela mostra a evolução da nota total ao longo das redações submetidas. Quando existe mais de uma redação, a interface também mostra a variação mais recente por competência.
+Ela combina duas visualizações:
+
+- evolução da nota total ao longo das redações submetidas;
+- evolução aberta por competência, com uma linha para C1, C2, C3, C4 e C5.
+
+Quando existe mais de uma redação, a interface também mostra um resumo interpretativo:
+
+- maior evolução entre a primeira e a redação mais recente;
+- competência mais estável;
+- queda recente, quando alguma competência diminui em relação à redação anterior.
+
+Redações marcadas como versões antigas não entram no cálculo da linha do tempo, evitando que uma reescrita seja contada junto com a versão substituída.
 
 Esse recurso ajuda o estudante a perceber progresso mesmo quando a nota total ainda não cresce de forma expressiva.
 

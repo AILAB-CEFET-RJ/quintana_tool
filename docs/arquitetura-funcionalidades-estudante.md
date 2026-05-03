@@ -196,13 +196,63 @@ frontend/src/components/studentInsights/
 
 Componentes:
 
-- `CompetencyRadar.tsx`: radar das cinco competências.
-- `ProgressTimeline.tsx`: linha do tempo de progresso na aba de redações.
+- `CompetencyRadar.tsx`: radar das cinco competências. O componente aceita `title` e `subtitle`, permitindo reutilização como radar individual da redação ou radar médio do estudante.
+- `ProgressTimeline.tsx`: linha do tempo de progresso na aba de redações, combinando evolução da nota total, evolução por competência e resumo de tendência.
 - `StudyPriorityCard.tsx`: cartão com as três prioridades de estudo.
 - `CompetencyFeedbackMap.tsx`: mapa de feedback por competência.
 - `RewriteChecklist.tsx`: checklist da próxima reescrita.
 - `VersionComparison.tsx`: comparação entre versões da mesma redação.
 - `StudentActivitiesPanel.tsx`: lista de atividades atribuídas ao estudante.
+
+### Página inicial do estudante
+
+Arquivo:
+
+```text
+frontend/src/pages/quintana/home.tsx
+```
+
+Na aba `Minhas redações`, a página calcula uma redação sintética para representar a média das competências do estudante:
+
+```ts
+buildAverageCompetencyRedacao(redacoes)
+```
+
+Essa estrutura contém os campos `nota_competencia_1_model` a `nota_competencia_5_model`, calculados pela média das redações visíveis.
+
+Regras:
+
+- redações com `is_latest_version === false` são ignoradas;
+- quando não há redações, o radar médio não é exibido;
+- o objeto médio é usado apenas no frontend, sem persistência no MongoDB.
+
+O radar médio é exibido antes da linha do tempo. A prioridade atual continua sendo calculada a partir da redação mais recente.
+
+### Linha do tempo e evolução por competência
+
+Arquivo:
+
+```text
+frontend/src/components/studentInsights/ProgressTimeline.tsx
+```
+
+O componente recebe a lista de redações do estudante e monta a evolução localmente no frontend.
+
+Tratamento dos dados:
+
+- redações com `is_latest_version === false` são filtradas para evitar contagem dupla de versões antigas;
+- a ordenação usa `created_at`;
+- quando `created_at` não existe, o timestamp derivado do `ObjectId` é usado como fallback;
+- com menos de duas redações, o componente exibe estado vazio.
+
+Visualizações renderizadas:
+
+- gráfico de linha da nota total, em escala de 0 a 1000;
+- gráfico multi-linha das competências C1-C5, em escala de 0 a 200;
+- barras com notas da redação mais recente e delta em relação à redação anterior;
+- resumo com maior evolução, competência mais estável e queda recente.
+
+As cores das competências são definidas no próprio componente para manter consistência na legenda e nas linhas.
 
 ### Modal de detalhes da redação
 
@@ -215,7 +265,7 @@ frontend/src/components/modalDetalhesRedacao.tsx
 Responsabilidades:
 
 - apresentar resumo da redação;
-- exibir radar e prioridades;
+- exibir radar individual da redação e prioridades;
 - exibir texto e notas;
 - exibir mapa de feedback e checklist;
 - consultar versões pelo endpoint `/redacoes/<id>/versions`;

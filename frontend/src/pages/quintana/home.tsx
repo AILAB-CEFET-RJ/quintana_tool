@@ -8,6 +8,7 @@ import ModalDetalhesTema from '@/components/modalDetalhesTema';
 import ModalDetalhesRedacao from "@/components/modalDetalhesRedacao";
 import { API_URL } from "@/config/config";
 import ProgressTimeline from '@/components/studentInsights/ProgressTimeline';
+import CompetencyRadar from '@/components/studentInsights/CompetencyRadar';
 import PageShell from '@/components/ui/PageShell';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionPanel from '@/components/ui/SectionPanel';
@@ -18,6 +19,27 @@ import StudentActivitiesPanel from '@/components/studentInsights/StudentActiviti
 
 const { TabPane } = Tabs;
 const { Option } = Select;
+
+const buildAverageCompetencyRedacao = (redacoes: Redacao[]) => {
+    const latestVersions = redacoes.filter((redacao) => redacao.is_latest_version !== false);
+
+    if (!latestVersions.length) {
+        return null;
+    }
+
+    const average = (field: keyof Redacao) => {
+        const total = latestVersions.reduce((sum, redacao) => sum + (Number(redacao[field]) || 0), 0);
+        return Math.round(total / latestVersions.length);
+    };
+
+    return {
+        nota_competencia_1_model: average('nota_competencia_1_model'),
+        nota_competencia_2_model: average('nota_competencia_2_model'),
+        nota_competencia_3_model: average('nota_competencia_3_model'),
+        nota_competencia_4_model: average('nota_competencia_4_model'),
+        nota_competencia_5_model: average('nota_competencia_5_model'),
+    };
+};
 
 export interface Tema {
     _id: string;
@@ -113,13 +135,22 @@ const Home = () => {
 
     useEffect(() => {
         const fetchRedacoes = async () => {
+            if (!isLoggedIn) {
+                return;
+            }
+
             try {
                 let url = `${API_URL}/redacoes`
                 if (tipoUsuario === 'aluno') {
+                    if (!nomeUsuario) {
+                        return;
+                    }
                     url += `?user=${nomeUsuario}`
                 }
                 const response = await fetch(url);
-                console.log(response);
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar redações');
+                }
                 const data = await response.json();
                 setRedacoesData(data);
             } catch (error) {
@@ -128,7 +159,7 @@ const Home = () => {
         };
 
         fetchRedacoes();
-    }, []);
+    }, [isLoggedIn, tipoUsuario, nomeUsuario]);
 
     useEffect(() => {
         const fetchAlunos = async () => {
@@ -346,10 +377,25 @@ const Home = () => {
         return bDate - aDate;
     })[0];
     const priority = latestRedacao ? getCompetencyScores(latestRedacao).sort((a, b) => a.score - b.score)[0] : null;
+    const averageCompetencyRedacao = tipoUsuario === 'aluno' ? buildAverageCompetencyRedacao(visibleRedacoes) : null;
     const pageTitle = tipoUsuario === 'professor' ? 'Painel do professor' : 'Minhas redações';
     const pageDescription = tipoUsuario === 'professor'
         ? 'Acompanhe temas, submissões e correções dos estudantes.'
         : 'Acompanhe seus textos, visualize progresso e identifique prioridades de estudo.';
+    const summaryTooltips = {
+        redacoes: tipoUsuario === 'professor'
+            ? 'Quantidade de redações disponíveis para consulta neste painel, considerando os filtros aplicados.'
+            : 'Quantidade de redações que você já enviou, considerando as versões visíveis.',
+        temas: tipoUsuario === 'professor'
+            ? 'Quantidade de temas cadastrados por você.'
+            : 'Quantidade de temas disponíveis para envio de redações.',
+        ultimaNota: tipoUsuario === 'professor'
+            ? 'Nota total da redação mais recente na listagem atual.'
+            : 'Nota total da sua redação mais recente.',
+        prioridade: tipoUsuario === 'professor'
+            ? 'Quantidade de estudantes cadastrados como alunos na plataforma.'
+            : 'Competência com menor nota na sua redação mais recente.'
+    };
 
     return (
         <PageShell>
@@ -358,24 +404,32 @@ const Home = () => {
             {isLoggedIn && (
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                     <Col xs={24} sm={12} lg={6}>
-                        <Card bordered={false} style={{ borderRadius: 8 }}>
-                            <Statistic title="Redações" value={visibleRedacoes.length} prefix={<FileTextOutlined />} />
-                        </Card>
+                        <Tooltip title={summaryTooltips.redacoes}>
+                            <Card bordered={false} style={{ borderRadius: 8 }}>
+                                <Statistic title="Redações" value={visibleRedacoes.length} prefix={<FileTextOutlined />} />
+                            </Card>
+                        </Tooltip>
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <Card bordered={false} style={{ borderRadius: 8 }}>
-                            <Statistic title="Temas disponíveis" value={tipoUsuario === 'professor' ? handleFilterTemas().length : temasData.length} prefix={<ReadOutlined />} />
-                        </Card>
+                        <Tooltip title={summaryTooltips.temas}>
+                            <Card bordered={false} style={{ borderRadius: 8 }}>
+                                <Statistic title="Temas disponíveis" value={tipoUsuario === 'professor' ? handleFilterTemas().length : temasData.length} prefix={<ReadOutlined />} />
+                            </Card>
+                        </Tooltip>
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <Card bordered={false} style={{ borderRadius: 8 }}>
-                            <Statistic title="Última nota" value={latestRedacao ? Math.round(Number(latestRedacao.nota_total) || 0) : 0} prefix={<TrophyOutlined />} />
-                        </Card>
+                        <Tooltip title={summaryTooltips.ultimaNota}>
+                            <Card bordered={false} style={{ borderRadius: 8 }}>
+                                <Statistic title="Última nota" value={latestRedacao ? Math.round(Number(latestRedacao.nota_total) || 0) : 0} prefix={<TrophyOutlined />} />
+                            </Card>
+                        </Tooltip>
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <Card bordered={false} style={{ borderRadius: 8 }}>
-                            <Statistic title={tipoUsuario === 'professor' ? 'Alunos listados' : 'Prioridade atual'} value={tipoUsuario === 'professor' ? alunos.length : priority?.code || '-'} prefix={<UserOutlined />} />
-                        </Card>
+                        <Tooltip title={summaryTooltips.prioridade}>
+                            <Card bordered={false} style={{ borderRadius: 8 }}>
+                                <Statistic title={tipoUsuario === 'professor' ? 'Alunos listados' : 'Prioridade atual'} value={tipoUsuario === 'professor' ? alunos.length : priority?.code || '-'} prefix={<UserOutlined />} />
+                            </Card>
+                        </Tooltip>
                     </Col>
                 </Row>
             )}
@@ -425,7 +479,16 @@ const Home = () => {
                         )}
                     </Space>
                     {isLoggedIn && tipoUsuario === 'aluno' && (
-                        <ProgressTimeline redacoes={visibleRedacoes} />
+                        <>
+                            {averageCompetencyRedacao && (
+                                <CompetencyRadar
+                                    redacao={averageCompetencyRedacao}
+                                    title="Radar médio das competências"
+                                    subtitle="Média das competências considerando as redações mais recentes de cada versão."
+                                />
+                            )}
+                            <ProgressTimeline redacoes={visibleRedacoes} />
+                        </>
                     )}
                     {isLoggedIn &&
                         <CustomTable
