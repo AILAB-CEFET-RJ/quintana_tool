@@ -1,0 +1,451 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\newcommand{\screenshot}[2]{
+    \begin{figure}[H]
+        \centering
+        \fbox{\parbox[c][6cm][c]{0.9\textwidth}{\centering Inserir screenshot: #1}}
+        \caption{#2}
+    \end{figure}
+}
+
+\title{Manual de Utilização do Quintana}
+\author{Equipe do Projeto}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textbf{Versão do documento:} preencher \\
+\textbf{Versão/commit do sistema:} preencher \\
+\textbf{Responsáveis pela documentação:} preencher
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Apresentação}
+
+\subsection{Objetivo deste manual}
+Explicar que este documento apresenta o passo a passo de utilização do Quintana por estudantes e professores.
+
+\subsection{Público-alvo}
+Indicar os públicos:
+\begin{itemize}
+    \item estudantes;
+    \item professores;
+    \item mediadores de oficinas;
+    \item equipe de apoio.
+\end{itemize}
+
+\subsection{O que este manual não cobre}
+Indicar que instalação, arquitetura, banco de dados e detalhes técnicos ficam no manual do sistema ou na documentação técnica.
+
+\subsection{Convenções}
+Explicar como serão representados:
+\begin{itemize}
+    \item nomes de botões;
+    \item nomes de abas;
+    \item mensagens do sistema;
+    \item exemplos de usuários;
+    \item screenshots.
+\end{itemize}
+
+\section{Acesso ao sistema}
+
+\subsection{Endereço da aplicação}
+Informar a URL de acesso usada na oficina ou ambiente alvo.
+
+\screenshot{Tela de login}{Tela inicial de login do Quintana}
+
+\subsection{Entrar no sistema}
+Passo a passo:
+\begin{enumerate}
+    \item acessar a URL da aplicação;
+    \item informar e-mail;
+    \item informar senha;
+    \item clicar em \textbf{Entrar}.
+\end{enumerate}
+
+\subsection{Sair do sistema}
+Passo a passo para encerrar a sessão.
+
+\subsection{Usuários de demonstração}
+
+\begin{longtable}{|p{3cm}|p{5cm}|p{4cm}|}
+\hline
+\textbf{Perfil} & \textbf{E-mail} & \textbf{Senha} \\
+\hline
+Professor & preencher & preencher \\
+\hline
+Aluno & preencher & preencher \\
+\hline
+\end{longtable}
+
+\section{Utilização pelo estudante}
+
+\subsection{Visão geral da área do estudante}
+Descrever a primeira tela após login como estudante.
+
+\screenshot{Home do estudante}{Página inicial do estudante}
+
+\subsection{Consultar temas disponíveis}
+Passo a passo para localizar um tema.
+
+\screenshot{Aba Temas}{Lista de temas disponíveis para o estudante}
+
+\subsection{Enviar nova redação}
+Passo a passo:
+\begin{enumerate}
+    \item escolher um tema;
+    \item clicar em \textbf{Inserir Nova Redação};
+    \item escrever ou colar o texto;
+    \item enviar a redação;
+    \item aguardar a correção.
+\end{enumerate}
+
+\screenshot{Tela de envio de redação}{Tela usada pelo estudante para escrever e enviar uma redação}
+
+\subsection{Consultar minhas redações}
+Explicar a aba \textbf{Minhas redações}.
+
+\screenshot{Aba Minhas redações}{Lista de redações enviadas pelo estudante}
+
+\subsection{Interpretar os cards de resumo}
+Explicar os cards apresentados no topo da página:
+\begin{itemize}
+    \item Redações;
+    \item Temas disponíveis;
+    \item Última nota;
+    \item Prioridade atual.
+\end{itemize}
+
+\subsection{Interpretar o radar médio das competências}
+Explicar:
+\begin{itemize}
+    \item o que o radar mostra;
+    \item o significado das competências C1 a C5;
+    \item como identificar pontos fortes;
+    \item como identificar prioridades de estudo.
+\end{itemize}
+
+\screenshot{Radar médio das competências}{Radar médio exibido na aba Minhas redações}
+
+\subsection{Interpretar a linha do tempo de progresso}
+Explicar:
+\begin{itemize}
+    \item evolução da nota total;
+    \item evolução por competência;
+    \item maior evolução;
+    \item competência mais estável;
+    \item queda recente.
+\end{itemize}
+
+\screenshot{Linha do tempo}{Linha do tempo de progresso do estudante}
+
+\subsection{Abrir detalhes de uma redação}
+Passo a passo para abrir o modal de detalhes.
+
+\screenshot{Modal de redação}{Detalhes de uma redação}
+
+\subsection{Aba Resumo}
+Explicar os elementos da aba \textbf{Resumo}:
+\begin{itemize}
+    \item nota total;
+    \item radar individual da redação;
+    \item prioridades de estudo.
+\end{itemize}
+
+\subsection{Aba Texto}
+Explicar onde o estudante consulta o texto enviado.
+
+\subsection{Aba Notas}
+Explicar as notas por competência.
+
+\subsection{Aba Plano de ação}
+Explicar:
+\begin{itemize}
+    \item mapa de feedback por competência;
+    \item diagnóstico;
+    \item sugestão de melhoria;
+    \item ação prática;
+    \item checklist de reescrita.
+\end{itemize}
+
+\screenshot{Plano de ação}{Mapa de feedback e checklist de reescrita}
+
+\subsection{Aba Versões}
+Explicar como visualizar comparação entre versões da mesma redação.
+
+\subsection{Aba Feedback}
+Explicar onde aparece o feedback textual.
+
+\subsection{Reescrever uma redação}
+Passo a passo:
+\begin{enumerate}
+    \item abrir uma redação;
+    \item clicar em \textbf{Reescrever};
+    \item produzir nova versão;
+    \item enviar;
+    \item comparar versões.
+\end{enumerate}
+
+\subsection{Consultar atividades atribuídas}
+Explicar a aba \textbf{Atividades}.
+
+\screenshot{Aba Atividades}{Atividades atribuídas ao estudante}
+
+\subsection{Entender status das atividades}
+Explicar:
+\begin{itemize}
+    \item pendente;
+    \item enviada;
+    \item atrasada.
+\end{itemize}
+
+\section{Utilização pelo professor}
+
+\subsection{Visão geral da área do professor}
+Descrever a primeira tela após login como professor.
+
+\screenshot{Home do professor}{Página inicial do professor}
+
+\subsection{Interpretar os cards de resumo}
+Explicar os cards:
+\begin{itemize}
+    \item Redações;
+    \item Temas disponíveis;
+    \item Última nota;
+    \item Alunos listados.
+\end{itemize}
+
+\subsection{Gerenciar temas}
+Explicar a aba \textbf{Temas}.
+
+\screenshot{Aba Temas do professor}{Lista de temas do professor}
+
+\subsubsection{Criar novo tema}
+Passo a passo:
+\begin{enumerate}
+    \item clicar em \textbf{Adicionar Tema};
+    \item preencher nome do tema;
+    \item preencher descrição;
+    \item salvar.
+\end{enumerate}
+
+\subsubsection{Editar tema}
+Passo a passo para editar um tema existente.
+
+\subsubsection{Remover tema}
+Passo a passo para remover um tema.
+
+\subsection{Consultar redações recebidas}
+Explicar a aba \textbf{Redações recebidas}.
+
+\screenshot{Redações recebidas}{Tabela de redações recebidas pelo professor}
+
+\subsection{Filtrar redações}
+Explicar filtros disponíveis:
+\begin{itemize}
+    \item todas as redações;
+    \item redações dos meus temas;
+    \item aluno.
+\end{itemize}
+
+\subsection{Abrir e corrigir uma redação}
+Passo a passo:
+\begin{enumerate}
+    \item clicar no título da redação;
+    \item consultar texto e notas do modelo;
+    \item preencher notas do professor, quando aplicável;
+    \item preencher feedback do professor;
+    \item salvar.
+\end{enumerate}
+
+\screenshot{Correção do professor}{Tela de edição ou correção de redação pelo professor}
+
+\subsection{Analisar a turma}
+Explicar a aba \textbf{Análise da turma}.
+
+\screenshot{Análise da turma}{Painel de analytics do professor}
+
+\subsection{Filtros da análise}
+Explicar:
+\begin{itemize}
+    \item filtro por turma;
+    \item filtro por atividade;
+    \item agrupamento por atividade, tema ou dia.
+\end{itemize}
+
+\subsection{Distribuição por competência}
+Explicar como interpretar a distribuição das notas da turma.
+
+\subsection{Heatmap aluno por competência}
+Explicar como identificar padrões no heatmap.
+
+\subsection{Ranking de competências problemáticas}
+Explicar como usar o ranking para planejamento docente.
+
+\subsection{Agrupamento pedagógico de alunos}
+Explicar como interpretar os grupos sugeridos.
+
+\subsection{Evolução da turma}
+Explicar como interpretar a evolução ao longo de atividades, temas ou datas.
+
+\subsection{Comparação entre tema e desempenho}
+Explicar como identificar temas com maior dificuldade.
+
+\subsection{Alertas pedagógicos}
+Explicar os tipos de alerta e como eles podem apoiar intervenção docente.
+
+\subsection{Gerenciar turmas e atividades}
+Explicar a aba \textbf{Turmas e atividades}.
+
+\screenshot{Turmas e atividades}{Tela de gerenciamento de turmas e atividades}
+
+\subsubsection{Criar turma}
+Passo a passo para criar uma turma e selecionar estudantes.
+
+\subsubsection{Editar turma}
+Passo a passo para editar nome ou estudantes da turma.
+
+\subsubsection{Remover turma}
+Passo a passo para remover turma.
+
+\subsubsection{Criar atividade}
+Passo a passo para criar atividade vinculada a turma e tema.
+
+\subsubsection{Editar atividade}
+Passo a passo para editar atividade.
+
+\subsubsection{Remover atividade}
+Passo a passo para remover atividade.
+
+\subsection{Acompanhar submissões de atividade}
+Explicar como consultar:
+\begin{itemize}
+    \item alunos esperados;
+    \item alunos que enviaram;
+    \item alunos pendentes;
+    \item alunos atrasados.
+\end{itemize}
+
+\section{Utilização em oficinas}
+
+\subsection{Roteiro sugerido para estudantes}
+Inserir roteiro curto de uso durante oficina.
+
+\subsection{Roteiro sugerido para professores}
+Inserir roteiro curto de uso durante oficina.
+
+\subsection{Atividades práticas sugeridas}
+Listar sugestões de atividades para oficina.
+
+\subsection{Dicas para mediação}
+Indicar cuidados ao apresentar notas, feedback e analytics.
+
+\section{Mensagens comuns e solução de problemas}
+
+\subsection{Não consigo entrar}
+Orientar verificações de e-mail, senha e backend.
+
+\subsection{A página mostra 404}
+Informar rotas corretas, como `/quintana/login` e `/quintana/home`.
+
+\subsection{Minhas redações não aparecem}
+Orientar recarregar, conferir login e chamar equipe de apoio.
+
+\subsection{Analytics não carrega}
+Orientar verificar filtros, turmas, atividades e conexão.
+
+\subsection{Sessão expirada}
+Explicar que o usuário deve fazer login novamente.
+
+\subsection{Acesso negado}
+Explicar que o usuário pode estar tentando acessar recurso de outro perfil.
+
+\section{Perguntas frequentes}
+
+\subsection{A nota automática substitui o professor?}
+Responder.
+
+\subsection{O que significam C1, C2, C3, C4 e C5?}
+Responder.
+
+\subsection{Posso reescrever a mesma redação?}
+Responder.
+
+\subsection{O professor vê minhas redações?}
+Responder.
+
+\subsection{O que faço se minha nota baixar?}
+Responder.
+
+\section{Glossário rápido}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Termo} & \textbf{Definição} \\
+\hline
+Competência & preencher \\
+\hline
+Tema & preencher \\
+\hline
+Redação & preencher \\
+\hline
+Reescrita & preencher \\
+\hline
+Atividade & preencher \\
+\hline
+Turma & preencher \\
+\hline
+Radar & preencher \\
+\hline
+Heatmap & preencher \\
+\hline
+\end{longtable}
+
+\section{Apêndices}
+
+\subsection{Apêndice A: checklist rápido do estudante}
+Inserir checklist de ações principais do estudante.
+
+\subsection{Apêndice B: checklist rápido do professor}
+Inserir checklist de ações principais do professor.
+
+\subsection{Apêndice C: usuários de demonstração}
+Preencher usuários e senhas usados na oficina.
+
+\subsection{Apêndice D: histórico de versões do manual}
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{7cm}|}
+\hline
+\textbf{Data} & \textbf{Responsável} & \textbf{Alteração} \\
+\hline
+preencher & preencher & preencher \\
+\hline
+\end{longtable}
+
+\end{document}

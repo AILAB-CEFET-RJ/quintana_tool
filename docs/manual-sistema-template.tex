@@ -1,0 +1,340 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{Manual do Sistema Quintana}
+\author{Equipe do Projeto}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textbf{Versão do documento:} preencher \\
+\textbf{Versão/commit do sistema:} preencher \\
+\textbf{Responsáveis pela documentação:} preencher
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Apresentação}
+
+\subsection{Objetivo do sistema}
+Descrever, em linguagem acessível, o que é o Quintana e qual problema educacional ele apoia.
+
+\subsection{Público-alvo}
+Indicar os perfis de usuário atendidos:
+\begin{itemize}
+    \item estudantes;
+    \item professores;
+    \item equipe responsável pela oficina ou operação.
+\end{itemize}
+
+\subsection{Escopo do manual}
+Explicar o que este manual cobre e o que não cobre.
+
+\subsection{Convenções usadas no documento}
+Explicar padrões de escrita, nomes de botões, exemplos de usuários, comandos e imagens.
+
+\section{Visão geral do sistema}
+
+\subsection{Principais funcionalidades}
+Listar as funcionalidades centrais do sistema.
+
+\subsection{Fluxo geral de uso}
+Inserir um diagrama ou descrição textual do fluxo:
+\begin{enumerate}
+    \item login;
+    \item escolha do perfil;
+    \item envio ou consulta de redações;
+    \item visualização de resultados;
+    \item análise pedagógica.
+\end{enumerate}
+
+\subsection{Perfis de usuário}
+
+\subsubsection{Estudante}
+Descrever o que o estudante pode fazer.
+
+\subsubsection{Professor}
+Descrever o que o professor pode fazer.
+
+\section{Perfis e autenticação}
+
+\subsection{Endereços e ambientes}
+Informar as URLs usadas em ambiente local, oficina ou produção.
+
+\subsection{Modelo de autenticação}
+Descrever, em nível técnico-operacional, como a autenticação funciona:
+\begin{itemize}
+    \item login por e-mail e senha;
+    \item emissão de token;
+    \item envio do token nas chamadas autenticadas;
+    \item expiração do token.
+\end{itemize}
+
+\subsection{Usuários fictícios para demonstração}
+Preencher tabela com usuários de teste.
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{4cm}|}
+\hline
+\textbf{Perfil} & \textbf{E-mail} & \textbf{Senha} \\
+\hline
+Professor & preencher & preencher \\
+\hline
+Aluno & preencher & preencher \\
+\hline
+\end{longtable}
+
+\subsection{Perfis e permissões}
+Resumir as permissões de estudante e professor.
+
+\section{Funcionalidades por perfil}
+
+\subsection{Observação sobre o manual de utilização}
+O passo a passo de uso das telas será descrito em um manual de utilização separado.
+Neste documento, as funcionalidades devem ser descritas em nível de sistema: objetivo, dados envolvidos, regras principais e dependências.
+
+\subsection{Funcionalidades do estudante}
+Descrever, de forma resumida, os recursos disponíveis ao estudante:
+\begin{itemize}
+    \item consulta de temas;
+    \item envio de redações;
+    \item visualização de notas por competência;
+    \item radar médio das competências;
+    \item linha do tempo de progresso;
+    \item plano de ação;
+    \item checklist de reescrita;
+    \item comparação entre versões;
+    \item atividades atribuídas.
+\end{itemize}
+
+\subsection{Funcionalidades do professor}
+Descrever, de forma resumida, os recursos disponíveis ao professor:
+\begin{itemize}
+    \item cadastro e gestão de temas;
+    \item consulta de redações recebidas;
+    \item correção ou comentário do professor;
+    \item cadastro e gestão de turmas;
+    \item cadastro e gestão de atividades;
+    \item acompanhamento de submissões;
+    \item análise da turma;
+    \item alertas pedagógicos.
+\end{itemize}
+
+\subsection{Relação com o manual de utilização}
+Indicar quais tópicos deverão ser detalhados no manual de utilização, evitando duplicação neste documento.
+
+\section{Arquitetura funcional}
+
+\subsection{Módulos do frontend}
+Descrever as principais páginas e componentes do frontend, sem detalhar o passo a passo de uso.
+
+\subsection{Módulos do backend}
+Descrever os principais módulos do backend:
+\begin{itemize}
+    \item autenticação e autorização;
+    \item avaliação de redações;
+    \item feedback estruturado;
+    \item analytics do professor;
+    \item acesso ao banco;
+    \item scripts operacionais.
+\end{itemize}
+
+\subsection{Coleções do MongoDB}
+Descrever as coleções principais e seus relacionamentos:
+\begin{itemize}
+    \item users;
+    \item temas;
+    \item classes;
+    \item activities;
+    \item redacoes.
+\end{itemize}
+
+\subsection{Fluxos técnicos principais}
+Descrever fluxos de sistema:
+\begin{itemize}
+    \item login e emissão de token;
+    \item envio de redação;
+    \item geração de feedback;
+    \item consulta de redações;
+    \item cálculo de analytics;
+    \item carga de dados fictícios.
+\end{itemize}
+
+\section{Interpretação pedagógica}
+
+\subsection{Competências do ENEM}
+Descrever resumidamente C1, C2, C3, C4 e C5.
+
+\begin{longtable}{|p{2cm}|p{5cm}|p{7cm}|}
+\hline
+\textbf{Competência} & \textbf{Nome curto} & \textbf{Descrição} \\
+\hline
+C1 & Norma escrita & preencher \\
+\hline
+C2 & Proposta e repertório & preencher \\
+\hline
+C3 & Argumentação & preencher \\
+\hline
+C4 & Coesão & preencher \\
+\hline
+C5 & Intervenção & preencher \\
+\hline
+\end{longtable}
+
+\subsection{Cuidados na interpretação das notas}
+Explicar que a avaliação automática deve apoiar, e não substituir, o julgamento pedagógico do professor.
+
+\subsection{Uso em oficinas}
+Explicar como usar os painéis para discussão com estudantes e professores.
+
+\section{Administração e operação}
+
+\subsection{Requisitos para execução}
+Listar requisitos:
+\begin{itemize}
+    \item Python;
+    \item Node.js;
+    \item MongoDB;
+    \item navegador;
+    \item rede local, quando aplicável.
+\end{itemize}
+
+\subsection{Subida do backend}
+Inserir comandos validados.
+
+\subsection{Subida do frontend}
+Inserir comandos para desenvolvimento e para oficina.
+
+\subsection{Carga de dados fictícios}
+Explicar o uso do script de seed.
+
+\subsection{Health check da oficina}
+Explicar como executar o script de verificação antes da oficina.
+
+\subsection{Limpeza de dados por batch}
+Explicar como limpar dados de uma oficina.
+
+\section{Segurança e privacidade}
+
+\subsection{Dados fictícios e dados reais}
+Explicar a diferença e os cuidados necessários.
+
+\subsection{Autenticação}
+Descrever login, token e expiração em linguagem de manual.
+
+\subsection{Perfis e permissões}
+Explicar o que aluno e professor podem acessar.
+
+\subsection{Recomendações para oficinas}
+Listar cuidados:
+\begin{itemize}
+    \item usar dados fictícios;
+    \item não expor MongoDB à internet;
+    \item configurar CORS;
+    \item usar chave JWT forte;
+    \item limpar dados quando necessário.
+\end{itemize}
+
+\section{Solução de problemas}
+
+\subsection{Backend não responde}
+Descrever sintomas e verificações.
+
+\subsection{Frontend mostra erro ou página 404}
+Descrever rotas corretas e procedimentos.
+
+\subsection{Login não funciona}
+Descrever verificações de usuário, senha, backend e banco.
+
+\subsection{Dados não aparecem}
+Descrever verificações de carga, banco, batch e permissões.
+
+\subsection{Analytics do professor não carrega}
+Descrever verificações de turma, atividade, redações e cache.
+
+\subsection{Erro de CORS}
+Explicar como verificar `CORS_ORIGINS`.
+
+\section{Perguntas frequentes}
+
+\subsection{A nota automática substitui a correção do professor?}
+Responder.
+
+\subsection{Posso usar dados reais de estudantes?}
+Responder com cuidados de consentimento, anonimização e segurança.
+
+\subsection{Como reiniciar a aplicação?}
+Responder.
+
+\subsection{Como limpar os dados de uma oficina?}
+Responder.
+
+\subsection{Como criar novos usuários fictícios?}
+Responder.
+
+\section{Glossário}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Termo} & \textbf{Definição} \\
+\hline
+Competência & preencher \\
+\hline
+Redação & preencher \\
+\hline
+Tema & preencher \\
+\hline
+Turma & preencher \\
+\hline
+Atividade & preencher \\
+\hline
+Seed batch & preencher \\
+\hline
+Analytics & preencher \\
+\hline
+\end{longtable}
+
+\section{Apêndices}
+
+\subsection{Apêndice A: usuários de demonstração}
+Preencher com usuários gerados pelo script de carga.
+
+\subsection{Apêndice B: comandos úteis}
+Listar comandos de backend, frontend, MongoDB, carga e health check.
+
+\subsection{Apêndice C: checklist pré-oficina}
+Inserir checklist resumido.
+
+\subsection{Apêndice D: histórico de versões do manual}
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{7cm}|}
+\hline
+\textbf{Data} & \textbf{Responsável} & \textbf{Alteração} \\
+\hline
+preencher & preencher & preencher \\
+\hline
+\end{longtable}
+
+\end{document}
