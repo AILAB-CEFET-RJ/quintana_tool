@@ -1,14 +1,15 @@
 import axios from 'axios'
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react'
-import { Modal, Skeleton, Collapse } from 'antd'
+import { Modal, Skeleton, Collapse, Button, Space, Alert, Card, Statistic, message } from 'antd'
 import { ClearOutlined, CheckOutlined, UploadOutlined } from '@ant-design/icons'
 import TextArea from 'antd/lib/input/TextArea'
-import { S } from '@/styles/Redacao.styles'
 import { useAuth } from '../../context';
 import { API_URL } from "@/config/config";
-import { CSSProperties } from 'react'
 import { authFetch, authHeaders } from '@/lib/authFetch'
+import PageShell from '@/components/ui/PageShell'
+import PageHeader from '@/components/ui/PageHeader'
+import SectionPanel from '@/components/ui/SectionPanel'
 
 
 const Redacao = () => {
@@ -16,14 +17,28 @@ const Redacao = () => {
   const [essay, setEssay] = useState('')
   const [essayGrade, setEssayGrade] = useState<object>({ key: 'value' })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter();
   const { id, rewriteOf, classId, activityId } = router.query;
   const { nomeUsuario } = useAuth();
   const { Panel } = Collapse;
 
   const showModalText = async () => {
-    await getEssayGrade()
-    setIsModalOpen(true)
+    if (!essay.trim()) {
+      message.warning('Escreva a redação antes de enviar.')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await getEssayGrade()
+      setIsModalOpen(true)
+    } catch (error) {
+      console.error('Erro ao enviar redação:', error)
+      message.error('Não foi possível enviar a redação.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const showModalImage = async () => {
@@ -102,13 +117,6 @@ const Redacao = () => {
   }
 
 
-  const labelStyle = {
-    marginTop: '20px',
-    marginBottom: '25px',
-    whiteSpace: 'pre-line' as const,
-    width: '50%',
-  }
-
   const [tema, setTema] = useState<string>('')
   const [descricaoTema, setDescricaoTema] = useState<string>('')
 
@@ -150,42 +158,70 @@ const Redacao = () => {
     fetchTema()
   }, [id, tema])
 
+  const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0
+  const charCount = essay.length
+
   return (
-    <S.Wrapper>
-      <S.Title>🧾 Redação 🧾</S.Title>
-      {rewriteOf && (
-        <p style={{ color: '#6b7280', marginTop: -8 }}>
-          Reescrita de uma redação anterior
-        </p>
-      )}
-
-      <Collapse style={labelStyle}>
-        <Panel header="Tema" key="1">
-          <h3>{tema}</h3>
-          <span>{descricaoTema}</span>
-        </Panel>
-      </Collapse>
-
-      <TextArea
-        value={essay}
-        onChange={handleChange}
-        style={{ padding: 24, minHeight: 380, background: 'white', width: '50%' }}
-        placeholder='Escreva sua redação aqui'
-        autoComplete='off'
-        autoCorrect='off'
-        autoCapitalize='off'
-        spellCheck={false}
+    <PageShell maxWidth={1040}>
+      <PageHeader
+        title={rewriteOf ? 'Reescrever redação' : 'Enviar redação'}
+        description="Produza seu texto dissertativo-argumentativo e envie para receber a avaliação por competência."
       />
 
-      <S.ButtonWrapper>
-        <S.MyButton onClick={clearEssay} size='small' type='primary' danger icon={<ClearOutlined />}>
-          Apagar texto
-        </S.MyButton>
+      {rewriteOf && (
+        <Alert
+          type="info"
+          showIcon
+          message="Reescrita de redação anterior"
+          description="Esta submissão será vinculada à versão anterior para comparação de progresso."
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
-        <S.MyButton onClick={showModalText} size='small' type='primary' icon={<CheckOutlined />}>
-          Enviar redação
-        </S.MyButton>
-      </S.ButtonWrapper>
+      <SectionPanel>
+        <Collapse bordered={false} defaultActiveKey={['tema']} style={{ marginBottom: 16, background: '#ffffff' }}>
+          <Panel header="Tema da redação" key="tema">
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>{tema || 'Carregando tema...'}</h2>
+            <p style={{ margin: 0, whiteSpace: 'pre-line', color: '#4b5563' }}>
+              {descricaoTema || 'A descrição do tema será exibida aqui.'}
+            </p>
+          </Panel>
+        </Collapse>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <Card size="small">
+            <Statistic title="Palavras" value={wordCount} />
+          </Card>
+          <Card size="small">
+            <Statistic title="Caracteres" value={charCount} />
+          </Card>
+        </div>
+
+        <TextArea
+          value={essay}
+          onChange={handleChange}
+          style={{ padding: 20, minHeight: 430, background: 'white', fontSize: 16, lineHeight: 1.65, resize: 'vertical' }}
+          placeholder='Escreva sua redação aqui'
+          autoComplete='off'
+          autoCorrect='off'
+          autoCapitalize='off'
+          spellCheck={false}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+          <Button onClick={() => router.push('/quintana/home')}>
+            Voltar
+          </Button>
+          <Space wrap>
+            <Button onClick={clearEssay} danger icon={<ClearOutlined />}>
+              Apagar texto
+            </Button>
+            <Button type="primary" onClick={showModalText} loading={isSubmitting} icon={<CheckOutlined />}>
+              Enviar redação
+            </Button>
+          </Space>
+        </div>
+      </SectionPanel>
 
       <Modal title='Nota da redação' open={isModalOpen} onOk={handleOk} onCancel={handleCancel} footer={null}>
         {essayGrade ? (
@@ -196,7 +232,7 @@ const Redacao = () => {
           <Skeleton paragraph={{ rows: 0 }} />
         )}
       </Modal>
-    </S.Wrapper>
+    </PageShell>
   )
 }
 
