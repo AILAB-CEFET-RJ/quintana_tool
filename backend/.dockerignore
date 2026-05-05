@@ -1,0 +1,5 @@
+*.pkl
+*.zip
+__pycache__/
+*.pyc
+essays/
