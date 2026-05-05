@@ -142,7 +142,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
 
     return (
         <Modal
-            title={tipoUsuario === 'aluno' ? 'Detalhes da redacao' : 'Editar redação'}
+            title={tipoUsuario === 'aluno' ? 'Detalhes da redação' : 'Editar redação'}
             open={open}
             onCancel={onCancel}
             footer={null}

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react'
-import { Modal, Collapse, Button, Space, Alert, Card, Statistic, message, Result } from 'antd'
+import { Modal, Collapse, Button, Space, Alert, Card, Statistic, message, Result, Input } from 'antd'
 import { ClearOutlined, CheckOutlined } from '@ant-design/icons'
 import TextArea from 'antd/lib/input/TextArea'
 import { useAuth } from '../../context';
@@ -11,10 +11,12 @@ import PageShell from '@/components/ui/PageShell'
 import PageHeader from '@/components/ui/PageHeader'
 import SectionPanel from '@/components/ui/SectionPanel'
 import type { CSSProperties } from 'react'
+import { COMPETENCIES } from '@/lib/competencias'
 
 
 const Redacao = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [essayTitle, setEssayTitle] = useState('')
   const [essay, setEssay] = useState('')
   const [submissionResult, setSubmissionResult] = useState<any | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -66,6 +68,7 @@ const Redacao = () => {
   const submitEssay = async () => {
     const response = await axios.post(`${API_URL}/model`, {
       essay: essay,
+      title: essayTitle.trim(),
       id: id,
       aluno: nomeUsuario,
       rewrite_of: rewriteOf || null,
@@ -88,6 +91,7 @@ const Redacao = () => {
 
   const startNewEssay = () => {
     setEssay('')
+    setEssayTitle('')
     setSubmissionResult(null)
     setHasSubmitted(false)
     setIsModalOpen(false)
@@ -136,6 +140,8 @@ const Redacao = () => {
 
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0
   const charCount = essay.length
+  const submittedGrades = submissionResult?.grades ? Object.values(submissionResult.grades) : []
+  const submittedTotal = submittedGrades.reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)
 
   return (
     <PageShell maxWidth={1040}>
@@ -183,11 +189,25 @@ const Redacao = () => {
           </Card>
         </div>
 
+        <div style={{ maxWidth: 860, margin: '0 auto 14px' }}>
+          <label style={styles.inputLabel}>Título da redação</label>
+          <Input
+            size="large"
+            value={essayTitle}
+            onChange={(event) => setEssayTitle(event.target.value)}
+            disabled={hasSubmitted}
+            placeholder="Título da redação (opcional)"
+          />
+        </div>
+
         <div style={styles.paperShell}>
           <div style={styles.paperHeader}>
             <div>
               <span style={styles.paperLabel}>Tema</span>
               <strong style={styles.paperTitle}>{tema || 'Redação'}</strong>
+              <span style={styles.paperSubtitle}>
+                Título: {essayTitle.trim() || 'Sem título'}
+              </span>
             </div>
             <div style={styles.paperMeta}>
               <span>{nomeUsuario || 'Aluno'}</span>
@@ -255,18 +275,27 @@ const Redacao = () => {
 
         {submissionResult?.grades && (
           <div style={styles.resultPanel}>
+            <p style={styles.submittedTitle}>
+              <strong>Título:</strong> {essayTitle.trim() || 'Sem título'}
+            </p>
             <Statistic
               title="Nota total estimada"
-              value={Object.values(submissionResult.grades).reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)}
+              value={submittedTotal}
               suffix="/1000"
             />
             <div style={styles.gradeGrid}>
-              {Object.entries(submissionResult.grades).map(([key, value]) => (
-                <div key={key} style={styles.gradeItem}>
-                  <span style={styles.gradeLabel}>{key}</span>
-                  <strong>{Math.round(Number(value) || 0)}</strong>
-                </div>
-              ))}
+              {COMPETENCIES.map((competency, index) => {
+                const value = submittedGrades[index]
+                return (
+                  <Card key={competency.code} size="small" style={styles.gradeItem}>
+                    <Statistic
+                      title={`${competency.code} - ${competency.title}`}
+                      value={Math.round(Number(value) || 0)}
+                      suffix="/200"
+                    />
+                  </Card>
+                )
+              })}
             </div>
           </div>
         )}
@@ -302,8 +331,21 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: 3
   },
   paperTitle: {
+    display: 'block',
     color: '#111827',
     fontSize: 15
+  },
+  paperSubtitle: {
+    display: 'block',
+    color: '#4b5563',
+    fontSize: 13,
+    marginTop: 5
+  },
+  inputLabel: {
+    display: 'block',
+    marginBottom: 6,
+    color: '#374151',
+    fontWeight: 600
   },
   paperMeta: {
     display: 'flex',
@@ -337,23 +379,18 @@ const styles: Record<string, CSSProperties> = {
     padding: 16,
     background: '#fafafa'
   },
+  submittedTitle: {
+    margin: '0 0 14px',
+    color: '#374151'
+  },
   gradeGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gridTemplateColumns: '1fr',
     gap: 10,
     marginTop: 14
   },
   gradeItem: {
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    padding: 10,
-    background: '#ffffff',
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 8
-  },
-  gradeLabel: {
-    color: '#6b7280'
+    borderRadius: 8
   }
 }
 

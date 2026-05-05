@@ -188,14 +188,19 @@ def post_model_response():
     rewrite_of = request.json.get('rewrite_of')
     class_id = request.json.get('class_id')
     activity_id = request.json.get('activity_id')
+    submitted_title = (request.json.get('title') or "").strip()
     if rewrite_of:
         parent_candidate = database.get_redacao_document(rewrite_of) if ObjectId.is_valid(rewrite_of) else None
         if not parent_candidate or parent_candidate.get("aluno") != student:
             return jsonify({"error": "Redação de origem inválida"}), 403
 
-    lines = essay.split('\n')
-    title = lines[0] if lines else "Título não fornecido"
-    rest_of_essay = '\n'.join(line for line in lines[1:] if line.strip())
+    if submitted_title:
+        title = submitted_title
+        rest_of_essay = essay
+    else:
+        lines = essay.split('\n')
+        title = lines[0].strip() if lines and lines[0].strip() else "Sem título"
+        rest_of_essay = '\n'.join(line for line in lines[1:] if line.strip())
 
     obj = evaluate_redacao(essay)
 
