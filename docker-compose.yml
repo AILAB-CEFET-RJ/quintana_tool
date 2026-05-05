@@ -3,8 +3,8 @@ services:
     build: ./backend
     command: bash -c "pip install --upgrade pip && pip install -r requirements.txt && python app.py"
     environment:
-      - SUBSCRIPTION_KEY="sua chave sem aspas aqui"
-      - ENDPOINT="seu endpoint sem aspas aqui"
+      - SUBSCRIPTION_KEY=${SUBSCRIPTION_KEY}
+      - ENDPOINT=${ENDPOINT}
       - MONGO_URI=${MONGO_URI}
       - OLLAMA_HOST=ollama
       - OPENAI_API_KEY=${OPENAI_API_KEY}
