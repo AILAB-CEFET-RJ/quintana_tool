@@ -4,95 +4,164 @@ Este documento descreve como preparar e executar o Quintana localmente.
 
 ## Visão geral dos serviços
 
-A aplicação possui três partes principais:
+A aplicação possui quatro partes principais:
 
-- MongoDB: banco de dados usado para usuários, temas e redações.
+- MongoDB: banco de dados usado para usuários, temas e redações (executado separadamente).
 - Backend Flask: API em `http://localhost:5000`.
 - Frontend Next.js: interface Web em `http://localhost:3000`.
+- Ollama: serviço local de LLM em `http://localhost:11434`.
+
+Backend, frontend e Ollama são gerenciados pelo Docker Compose. O MongoDB precisa estar acessível externamente.
 
 ## Pré-requisitos
 
-- Python 3.10 ou superior.
-- Node.js e npm.
-- Docker, recomendado para subir o MongoDB local.
-
-Em ambientes Linux/WSL, caso `pip` não esteja instalado:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y python3-pip
-```
+- Docker e Docker Compose.
+- Make (para atalhos de comando).
 
 ## Subir o MongoDB
 
-Em um terminal separado:
+O `docker-compose.yml` não inclui um serviço MongoDB. Suba-o separadamente antes de iniciar os demais serviços.
+
+### Opção 1 — via Docker
 
 ```bash
-docker run --rm --name quintana-mongo -p 27017:27017 mongo:7
+docker run -d --name quintana-mongo -p 27017:27017 mongo:7
 ```
 
-Se o nome `quintana-mongo` já estiver em uso, verifique se o container já está rodando:
+Para verificar se está rodando:
 
 ```bash
 docker ps
 ```
 
-Se existir um container parado com esse nome, remova ou inicie novamente:
+Para parar e reiniciar:
 
 ```bash
+docker stop quintana-mongo
 docker start quintana-mongo
 ```
 
-ou:
+### Opção 2 — instalação local
+
+Se preferir rodar o MongoDB diretamente na máquina, sem Docker:
+
+**Ubuntu/Debian:**
 
 ```bash
-docker rm quintana-mongo
-docker run --rm --name quintana-mongo -p 27017:27017 mongo:7
+sudo apt-get install -y gnupg curl
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
 ```
+
+Iniciar o serviço:
+
+```bash
+sudo systemctl start mongod
+sudo systemctl enable mongod  # opcional: inicia automaticamente com o sistema
+```
+
+Verificar se está rodando:
+
+```bash
+sudo systemctl status mongod
+```
+
+Nesse caso, mantenha `MONGO_URI=mongodb://localhost:27017` no `.env`. Como o MongoDB roda no host (não em container), `localhost` funciona diretamente tanto para acesso local quanto para os containers via `host.docker.internal`.
 
 O banco `textgrader` e as coleções são criados automaticamente quando a aplicação grava os primeiros dados.
 
-## Instalar e subir o backend
+## Configurar variáveis de ambiente
 
-Use outro terminal.
-
-Entre na pasta do backend:
+Na raiz do repositório, copie o arquivo de exemplo:
 
 ```bash
-cd ~/ailab/quintana_tool/backend
+make setup-env
 ```
 
-Instale as dependências:
+Isso cria o arquivo `.env` a partir do `.env.example`. Em seguida, edite o `.env` conforme necessário.
+
+### Variáveis disponíveis
 
 ```bash
-python3 -m pip install -r requirements.txt
+# Modo de operação: demo para oficinas com dados fictícios; production para uso real.
+APP_MODE=demo
+FLASK_DEBUG=false
+
+# MongoDB
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB_NAME=textgrader
+
+# Origens autorizadas a chamar o backend, separadas por vírgula.
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Token de autenticação. Troque JWT_SECRET fora do modo demo.
+JWT_SECRET=troque-esta-chave
+JWT_EXPIRATION_HOURS=8
+ANALYTICS_CACHE_TTL_SECONDS=300
+
+# Serviços externos.
+OPENAI_API_KEY=dummy
+SUBSCRIPTION_KEY=
+ENDPOINT=
+OLLAMA_HOST=ollama
 ```
 
-Suba o backend:
+**Observação sobre `MONGO_URI` no Docker:** ao rodar via Docker Compose, os containers não enxergam `localhost` como o host da máquina. Se o MongoDB estiver rodando no host, use:
+
+- Linux: o IP da interface `docker0` (tipicamente `172.17.0.1`) ou `host.docker.internal` se disponível.
+- WSL2: `host.docker.internal` costuma funcionar.
+
+Exemplo para WSL2:
 
 ```bash
-MONGO_URI=mongodb://localhost:27017 \
-MONGO_DB_NAME=textgrader \
-CORS_ORIGINS=http://localhost:3000 \
-JWT_SECRET=troque-esta-chave \
-ANALYTICS_CACHE_TTL_SECONDS=300 \
-OPENAI_API_KEY=dummy \
-python3 app.py
+MONGO_URI=mongodb://host.docker.internal:27017
 ```
 
-O backend ficará disponível em:
+**`JWT_SECRET`** assina os tokens de login. Para gerar uma chave segura:
 
-```text
-http://localhost:5000
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Para testar:
+Substitua `troque-esta-chave` pelo valor gerado. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
+
+**`ANALYTICS_CACHE_TTL_SECONDS`** controla por quantos segundos o backend reaproveita resultados dos painéis de análise do professor. Use `0` para desabilitar o cache.
+
+**`OPENAI_API_KEY`** é obrigatória para geração real de feedback via LLM. Para testar apenas cadastro, login e navegação, use `dummy`.
+
+**`SUBSCRIPTION_KEY` e `ENDPOINT`** são opcionais, usadas apenas no fluxo de OCR por imagem (Azure).
+
+## Subir os serviços
+
+Com o `.env` configurado e o MongoDB rodando, execute na raiz do repositório:
+
+```bash
+docker compose up --build
+```
+
+Ou pelo atalho do Make:
+
+```bash
+make up
+```
+
+O primeiro build pode demorar alguns minutos enquanto as dependências são instaladas.
+
+Após subir, os serviços ficam disponíveis em:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:5000`
+- Ollama: `http://localhost:11434`
+
+Para verificar o backend:
 
 ```bash
 curl http://localhost:5000/
 ```
 
-A resposta esperada é:
+Resposta esperada:
 
 ```json
 {
@@ -101,113 +170,28 @@ A resposta esperada é:
 }
 ```
 
-### Variáveis de ambiente do backend
+## Comandos do Make
 
-Obrigatórias para cadastro, login, temas e persistência:
+O `Makefile` na raiz do repositório oferece atalhos para as operações mais comuns:
 
-```bash
-MONGO_URI=mongodb://localhost:27017
-MONGO_DB_NAME=textgrader
-CORS_ORIGINS=http://localhost:3000
-JWT_SECRET=troque-esta-chave
-JWT_EXPIRATION_HOURS=8
-ANALYTICS_CACHE_TTL_SECONDS=300
-```
+| Comando | O que faz |
+|---|---|
+| `make setup-env` | Copia `.env.example` para `.env`. Execute uma vez antes de subir os serviços pela primeira vez. |
+| `make up` | Executa `docker compose up --build`, construindo as imagens e subindo todos os serviços. |
+| `make down` | Executa `docker compose down --remove-orphans`, parando e removendo os containers, incluindo containers órfãos. |
+| `make remove-logs` | Remove os arquivos de log (`*_log.txt`) gerados pelo backend em `backend/src/`. |
 
-`MONGO_DB_NAME` permite usar bancos separados por oficina ou ambiente.
-
-`CORS_ORIGINS` restringe quais frontends podem chamar o backend. Para múltiplas origens, separe por vírgula:
+## Parar os serviços
 
 ```bash
-CORS_ORIGINS=http://localhost:3000,http://192.168.0.20:3000
+docker compose down
 ```
 
-`JWT_SECRET` assina os tokens de login. Troque esse valor fora do modo demo.
-
-Para gerar uma chave local:
+Ou pelo Make (remove também containers órfãos):
 
 ```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+make down
 ```
-
-Use a string gerada no lugar de `troque-esta-chave`. Guarde esse valor fora do Git. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
-
-`ANALYTICS_CACHE_TTL_SECONDS` controla por quantos segundos o backend reaproveita o resultado dos painéis de análise do professor. Use `0` para desabilitar o cache.
-
-Obrigatória para geração real de feedback textual por LLM:
-
-```bash
-OPENAI_API_KEY=<sua_chave>
-```
-
-Para testar apenas cadastro, login e navegação, pode usar:
-
-```bash
-OPENAI_API_KEY=dummy
-```
-
-Opcionais, usadas apenas no fluxo de OCR por imagem:
-
-```bash
-SUBSCRIPTION_KEY=<chave_azure>
-ENDPOINT=<endpoint_azure>
-```
-
-## Instalar e subir o frontend
-
-Use outro terminal.
-
-Entre na pasta do frontend:
-
-```bash
-cd ~/ailab/quintana_tool/frontend
-```
-
-Instale as dependências:
-
-```bash
-npm install --no-package-lock
-```
-
-Para desenvolvimento:
-
-```bash
-npm run dev
-```
-
-Para executar a versão de produção local:
-
-```bash
-npm run build
-npm run start
-```
-
-Para oficinas com vários acessos simultâneos, prefira `npm run build` seguido de `npm run start`. Evite `npm run dev`, pois ele recompila páginas sob demanda e pode ficar mais lento.
-
-O frontend ficará disponível em:
-
-```text
-http://localhost:3000
-```
-
-A API consumida pelo frontend está configurada em:
-
-```text
-frontend/src/config/config.js
-```
-
-Valor padrão:
-
-```js
-export const API_URL = 'http://localhost:5000';
-```
-
-## Ordem recomendada de subida local
-
-1. Subir o MongoDB.
-2. Subir o backend Flask.
-3. Subir o frontend Next.js.
-4. Acessar `http://localhost:3000`.
 
 ## Primeiro teste manual
 
@@ -219,118 +203,26 @@ export const API_URL = 'http://localhost:5000';
 6. Faça login como professor e cadastre um tema em `Criar novo tema`.
 7. Volte ao usuário aluno, escolha o tema e envie uma redação.
 
-## Reiniciar serviços
-
-### Backend
-
-No terminal onde o backend está rodando:
-
-```bash
-Ctrl+C
-```
-
-Depois:
-
-```bash
-cd ~/ailab/quintana_tool/backend
-MONGO_URI=mongodb://localhost:27017 \
-MONGO_DB_NAME=textgrader \
-CORS_ORIGINS=http://localhost:3000 \
-JWT_SECRET=troque-esta-chave \
-ANALYTICS_CACHE_TTL_SECONDS=300 \
-OPENAI_API_KEY=dummy \
-python3 app.py
-```
-
-### Frontend
-
-No terminal onde o frontend está rodando:
-
-```bash
-Ctrl+C
-```
-
-Depois:
-
-```bash
-cd ~/ailab/quintana_tool/frontend
-npm run build
-npm run start
-```
-
-### MongoDB
-
-Se o Mongo foi iniciado com `--rm`, parar o container remove a instância, mas os dados também serão perdidos caso não haja volume configurado.
-
-Para parar:
-
-```bash
-docker stop quintana-mongo
-```
-
-Para subir novamente:
-
-```bash
-docker run --rm --name quintana-mongo -p 27017:27017 mongo:7
-```
-
-## Execução com Docker Compose
-
-O repositório possui um `docker-compose.yml` com serviços para backend, frontend e Ollama.
-
-Exemplo:
-
-```bash
-MONGO_URI=mongodb://host.docker.internal:27017 OPENAI_API_KEY=<sua_chave> docker compose up --build
-```
-
-Observação: o `docker-compose.yml` atual não declara um serviço MongoDB. Por isso, o Mongo precisa estar acessível externamente e o valor de `MONGO_URI` deve apontar para ele.
-
-Em Linux, dependendo da configuração do Docker, `host.docker.internal` pode não estar disponível. Nesses casos, prefira o fluxo local descrito acima ou ajuste o compose para incluir um serviço MongoDB na mesma rede.
-
 ## Problemas comuns
-
-### `ModuleNotFoundError: No module named 'pymongo'`
-
-As dependências do backend não foram instaladas.
-
-```bash
-cd ~/ailab/quintana_tool/backend
-python3 -m pip install -r requirements.txt
-```
-
-### `No module named pip`
-
-Instale o `pip`:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y python3-pip
-```
-
-### Cadastro não faz nada ou mostra erro de conexão
-
-Verifique se o backend está rodando em `http://localhost:5000`:
-
-```bash
-curl http://localhost:5000/
-```
 
 ### Erro de conexão com MongoDB
 
-Verifique se o container está rodando:
+Verifique se o container do Mongo está rodando:
 
 ```bash
 docker ps
 ```
 
-E confirme se o backend foi iniciado com:
+Confirme se a variável `MONGO_URI` no `.env` está apontando para o endereço correto. Em WSL2, tente `host.docker.internal` no lugar de `localhost`.
 
-```bash
-MONGO_URI=mongodb://localhost:27017
-MONGO_DB_NAME=textgrader
-```
+### `database: disconnected` no `/`
+
+O backend subiu, mas não conseguiu se conectar ao MongoDB. Verifique o valor de `MONGO_URI` e se o container do Mongo está acessível na rede do Docker.
 
 ### Feedback textual indisponível
 
-Se `OPENAI_API_KEY=dummy` estiver sendo usado, cadastro/login e persistência funcionam, mas a geração real de feedback textual por LLM pode falhar. Configure uma chave real para testar esse fluxo.
+Se `OPENAI_API_KEY=dummy` estiver sendo usado, cadastro, login e persistência funcionam, mas a geração real de feedback textual por LLM irá falhar. Configure uma chave real para testar esse fluxo.
+
+### Porta já em uso
+
+Se `5000` ou `3000` já estiverem ocupadas, pare o processo que as utiliza ou ajuste o mapeamento de portas no `docker-compose.yml`.

@@ -34,7 +34,7 @@ SENHA_PADRAO = "123456"
 SENHA_HASH = bcrypt.hashpw(SENHA_PADRAO.encode('utf-8'), bcrypt.gensalt())  # bytes
 
 PROFESSORES = [
-    {"username": "prof_mariana", "nome": "Profa. Dra. Mariana Oliveira", "email": "ariana.oliveira@quintana.local"},
+    {"username": "prof_mariana", "nome": "Profa. Dra. Mariana Oliveira", "email": "mariana.oliveira@quintana.local"},
     {"username": "prof_rafael", "nome": "Prof. Dr. Rafael Mendes", "email": "rafael.mendes@quintana.local"},
     {"username": "prof_carla", "nome": "Profa. Ma. Carla Santos", "email": "carla.santos@quintana.local"},
 ]
