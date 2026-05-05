@@ -123,3 +123,42 @@ def build_structured_feedback(grades):
         "priorities": priorities,
         "rewrite_checklist": rewrite_checklist
     }
+
+
+def build_textual_feedback_from_structured(structured_feedback):
+    competencies = structured_feedback.get("competencies", [])
+    priorities = structured_feedback.get("priorities", [])
+
+    lines = [
+        "## Feedback por competência",
+        "",
+        "A avaliação automática textual detalhada não está disponível no momento. "
+        "Abaixo está uma devolutiva formativa gerada a partir das notas por competência.",
+        "",
+    ]
+
+    for item in competencies:
+        lines.extend([
+            f"### {item.get('code')} — {item.get('title')}",
+            f"**Nota:** {int(float(item.get('score', 0) or 0))}/200",
+            "",
+            f"**Diagnóstico:** {item.get('diagnosis', '')}",
+            "",
+            f"**Sugestão:** {item.get('suggestion', '')}",
+            "",
+            f"**Ação prática:** {item.get('practice_action', '')}",
+            "",
+        ])
+
+    if priorities:
+        lines.extend([
+            "## Prioridades de estudo",
+            "",
+        ])
+        for item in priorities:
+            lines.append(
+                f"{item.get('rank')}. {item.get('competency')} — {item.get('title')}: "
+                f"{item.get('next_action')}"
+            )
+
+    return "\n".join(lines).strip()

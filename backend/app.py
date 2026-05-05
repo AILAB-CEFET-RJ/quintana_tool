@@ -3,7 +3,7 @@ from flask import Flask, g, request, jsonify
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text
 from llm import get_llm_feedback, get_structured_llm_feedback
-from pedagogy import build_structured_feedback
+from pedagogy import build_structured_feedback, build_textual_feedback_from_structured
 from analytics import build_teacher_analytics
 from schemas import validate_required_fields
 from flask_cors import CORS
@@ -162,6 +162,11 @@ def error_response(message, status=500, exc=None):
     return jsonify(payload), status
 
 
+def should_use_llm_feedback():
+    key = os.getenv("OPENAI_API_KEY", "").strip()
+    return bool(key) and key.lower() not in {"dummy", "none", "null", "changeme"}
+
+
 @app.route("/")
 def health():
     db_ok, db_error = database.check_db_connection()
@@ -221,6 +226,7 @@ def post_model_response():
         version_number = max([int(item.get("version_number", 1)) for item in existing_versions] or [1]) + 1
 
     feedback_structured = build_structured_feedback(grades)
+    feedback_text_fallback = build_textual_feedback_from_structured(feedback_structured)
 
     essay_data = {
         "titulo": title,
@@ -234,7 +240,7 @@ def post_model_response():
         "nota_professor": "",
         "id_tema": id_theme,
         "aluno": student,
-        "feedback_llm": "",
+        "feedback_llm": feedback_text_fallback,
         "competencias": competencias,
         "created_at": now,
         "updated_at": now,
@@ -263,6 +269,9 @@ def post_model_response():
     invalidate_analytics_for_redacao(essay_data)
 
     def gerar_feedback():
+        if not should_use_llm_feedback():
+            return
+
         try:
             feedback = get_llm_feedback(essay, grades, theme)
             structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
@@ -276,13 +285,12 @@ def post_model_response():
                 }}
             )
         except Exception as exc:
-            feedback_error = "Feedback textual indisponível no momento."
             if should_expose_errors():
-                feedback_error = f"{feedback_error} Detalhe: {exc}"
+                app.logger.warning("LLM feedback unavailable for redacao_id=%s: %s", essay_id, exc)
             database.db.redacoes.update_one(
                 {"_id": essay_id},
                 {"$set": {
-                    "feedback_llm": feedback_error,
+                    "feedback_llm": feedback_text_fallback,
                     "feedback_structured_source": "fallback",
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }}
@@ -315,21 +323,18 @@ def post_model_response_witht_ocr():
     }
 
     theme = database.get_tema(id_theme)
-    try:
-        feedback_llm = get_llm_feedback(essay, grades, theme)
-    except Exception as exc:
-        feedback_llm = "Feedback textual indisponível no momento."
-        if should_expose_errors():
-            feedback_llm = f"{feedback_llm} Detalhe: {exc}"
-
     now = datetime.now(timezone.utc).isoformat()
     feedback_structured = build_structured_feedback(grades)
+    feedback_llm = build_textual_feedback_from_structured(feedback_structured)
     feedback_structured_source = "fallback"
-    try:
-        feedback_structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
-        feedback_structured_source = "llm"
-    except Exception:
-        pass
+    if should_use_llm_feedback():
+        try:
+            feedback_llm = get_llm_feedback(essay, grades, theme)
+            feedback_structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
+            feedback_structured_source = "llm"
+        except Exception as exc:
+            if should_expose_errors():
+                app.logger.warning("LLM feedback unavailable for OCR submission: %s", exc)
 
     essay_data = {
         "titulo": "Redação de imagem",
