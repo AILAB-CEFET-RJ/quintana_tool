@@ -1,13 +1,16 @@
 services:
   flask-app:
-    image: python:3.10
-    command: bash -c "cd app/ && pip install -r requirements.txt && python app.py"
+    build: ./backend
+    command: bash -c "pip install --upgrade pip && pip install -r requirements.txt && python app.py"
     environment:
       - SUBSCRIPTION_KEY="sua chave sem aspas aqui"
       - ENDPOINT="seu endpoint sem aspas aqui"
       - MONGO_URI=${MONGO_URI}
       - OLLAMA_HOST=ollama
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      -CORS_ORIGINS=${CORS_ORIGIN}
+      -JWT_SECRET=${JWT_SECRET}
+      -ANALYTICS_CACHE_TTL_SECONDS=${ANALYTICS_CACHE_TTL_SECONDS}
     volumes:
       - ./backend:/app
     ports:
