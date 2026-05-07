@@ -5,7 +5,7 @@ setup-env:
 	cp .env.example .env
 
 up:
-	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up --build
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up --build -d
 
 down:
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down --remove-orphans
