@@ -9,6 +9,9 @@ MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "textgrader")
 JWT_SECRET = os.getenv("JWT_SECRET", "quintana-demo-secret")
 JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "8"))
 ANALYTICS_CACHE_TTL_SECONDS = int(os.getenv("ANALYTICS_CACHE_TTL_SECONDS", "300"))
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+PASSWORD_RESET_DEV_MODE = os.getenv("PASSWORD_RESET_DEV_MODE", "true").strip().lower() == "true"
+PASSWORD_RESET_EXPIRATION_MINUTES = int(os.getenv("PASSWORD_RESET_EXPIRATION_MINUTES", "30"))
 
 
 def get_cors_origins():

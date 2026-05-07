@@ -7,13 +7,17 @@ from pedagogy import build_structured_feedback, build_textual_feedback_from_stru
 from analytics import build_teacher_analytics
 from schemas import validate_required_fields
 from flask_cors import CORS
-from config import get_cors_origins, should_expose_errors
-from auth import create_token, require_auth, require_role
+from config import FRONTEND_URL, JWT_SECRET, PASSWORD_RESET_DEV_MODE, PASSWORD_RESET_EXPIRATION_MINUTES, get_cors_origins, should_expose_errors
+from auth import create_token, decode_token, get_bearer_token, require_auth, require_role
 from analytics_cache import get_cached_analytics, invalidate_teacher_analytics, set_cached_analytics
+from email_service import send_password_reset_email
 import bcrypt
+import hashlib
 import os
+import secrets
 from threading import Thread
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from itsdangerous import BadSignature, SignatureExpired
 
 app = Flask(__name__)
 cors_origins = get_cors_origins()
@@ -165,6 +169,33 @@ def error_response(message, status=500, exc=None):
 def should_use_llm_feedback():
     key = os.getenv("OPENAI_API_KEY", "").strip()
     return bool(key) and key.lower() not in {"dummy", "none", "null", "changeme"}
+
+
+def hash_password_reset_token(token):
+    return hashlib.sha256(f"{JWT_SECRET}:{token}".encode("utf-8")).hexdigest()
+
+
+def build_password_reset_url(token):
+    return f"{FRONTEND_URL}/quintana/redefinir-senha?token={token}"
+
+
+def password_reset_generic_response():
+    return jsonify({
+        "message": "Se o e-mail estiver cadastrado, enviaremos instruções para redefinir a senha."
+    }), 200
+
+
+def get_optional_current_user():
+    token = get_bearer_token()
+    if not token:
+        return None, None
+
+    try:
+        return decode_token(token), None
+    except SignatureExpired:
+        return None, (jsonify({"error": "Sessão expirada"}), 401)
+    except BadSignature:
+        return None, (jsonify({"error": "Token inválido"}), 401)
 
 
 @app.route("/")
@@ -419,6 +450,97 @@ def login():
         return jsonify({"error": "E-mail ou senha inválidos"}), 401
 
     return jsonify({"error": "E-mail ou senha inválidos"}), 401
+
+
+@app.post("/password-reset/request")
+def request_password_reset():
+    data = request.json or {}
+    email = (data.get("email") or "").strip()
+
+    if not email:
+        return password_reset_generic_response()
+
+    current_user, auth_error = get_optional_current_user()
+    if auth_error:
+        return auth_error
+
+    if current_user:
+        authenticated_user = database.find_user_by_username(current_user.get("username"))
+        if not authenticated_user or authenticated_user.get("email") != email:
+            if PASSWORD_RESET_DEV_MODE:
+                print(
+                    f"[password-reset] Solicitacao bloqueada: usuario autenticado "
+                    f"{current_user.get('username')} tentou gerar link para {email}",
+                    flush=True
+                )
+            return jsonify({"error": "Saia da conta atual antes de solicitar redefinição para outro e-mail."}), 403
+
+    user = database.find_user_by_email(email)
+    if not user:
+        if PASSWORD_RESET_DEV_MODE:
+            print(f"[password-reset] Solicitacao ignorada: e-mail nao encontrado ({email})", flush=True)
+        return password_reset_generic_response()
+
+    now = datetime.utcnow()
+    token = secrets.token_urlsafe(32)
+    token_hash = hash_password_reset_token(token)
+    expires_at = now + timedelta(minutes=PASSWORD_RESET_EXPIRATION_MINUTES)
+
+    database.invalidate_password_reset_tokens(user["_id"], now)
+    database.create_password_reset_token({
+        "user_id": str(user["_id"]),
+        "email": user.get("email"),
+        "token_hash": token_hash,
+        "created_at": now,
+        "expires_at": expires_at,
+        "used_at": None,
+        "requester_ip": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "schema_version": 1,
+    })
+
+    try:
+        send_password_reset_email(user.get("email"), build_password_reset_url(token))
+    except Exception as exc:
+        print(f"[password-reset] Falha ao preparar envio para {email}: {exc}")
+
+    return password_reset_generic_response()
+
+
+@app.post("/password-reset/confirm")
+def confirm_password_reset():
+    data = request.json or {}
+    token = (data.get("token") or "").strip()
+    new_password = data.get("new_password") or ""
+
+    if not token or not new_password:
+        return jsonify({"error": "Token e nova senha são obrigatórios."}), 400
+
+    if len(new_password) < 8:
+        return jsonify({"error": "A nova senha deve ter pelo menos 8 caracteres."}), 400
+
+    token_document = database.get_password_reset_token(hash_password_reset_token(token))
+    now = datetime.utcnow()
+
+    if not token_document or token_document.get("used_at") is not None:
+        return jsonify({"error": "Token inválido ou expirado."}), 400
+
+    expires_at = token_document.get("expires_at")
+    if not expires_at or expires_at < now:
+        return jsonify({"error": "Token inválido ou expirado."}), 400
+
+    user_id = token_document.get("user_id")
+    if not user_id or not ObjectId.is_valid(user_id):
+        return jsonify({"error": "Token inválido ou expirado."}), 400
+
+    user = database.db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return jsonify({"error": "Token inválido ou expirado."}), 400
+
+    hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
+    database.update_user_password(user_id, hashed_password)
+    database.mark_password_reset_token_used(token_document["_id"], now)
+
+    return jsonify({"message": "Senha redefinida com sucesso."}), 200
 
 
 @app.get("/users/alunos")

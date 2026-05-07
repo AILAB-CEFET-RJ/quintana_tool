@@ -43,6 +43,9 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 JWT_SECRET=troque-esta-chave
 JWT_EXPIRATION_HOURS=8
 ANALYTICS_CACHE_TTL_SECONDS=300
+FRONTEND_URL=http://localhost:3000
+PASSWORD_RESET_DEV_MODE=true
+PASSWORD_RESET_EXPIRATION_MINUTES=30
 OPENAI_API_KEY=dummy
 SUBSCRIPTION_KEY=
 ENDPOINT=
@@ -55,6 +58,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Use a string gerada no `.env` ou no comando de subida. Se a chave for alterada, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
+
+Para redefinição de senha em oficina, mantenha `PASSWORD_RESET_DEV_MODE=true`. Nesse modo, o backend não envia e-mail real: ele imprime no terminal um link como `/quintana/redefinir-senha?token=...`. O link expira conforme `PASSWORD_RESET_EXPIRATION_MINUTES` e o token é salvo no MongoDB apenas em formato derivado, não em texto puro.
 
 `MONGO_DB_NAME` permite separar bancos por oficina:
 

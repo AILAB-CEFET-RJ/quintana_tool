@@ -82,6 +82,46 @@ def login(user_data):
     users_collection = db.users
     return users_collection.find_one({"email": user_data['email']})
 
+def find_user_by_email(email):
+    users_collection = db.users
+    return users_collection.find_one({"email": email})
+
+def find_user_by_username(username):
+    users_collection = db.users
+    return users_collection.find_one({"username": username})
+
+def update_user_password(user_id, hashed_password):
+    users_collection = db.users
+    return users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"password": hashed_password}}
+    )
+
+def ensure_password_reset_indexes():
+    db.password_reset_tokens.create_index("token_hash", unique=True)
+    db.password_reset_tokens.create_index("user_id")
+    db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
+
+def invalidate_password_reset_tokens(user_id, used_at):
+    return db.password_reset_tokens.update_many(
+        {"user_id": str(user_id), "used_at": None},
+        {"$set": {"used_at": used_at}}
+    )
+
+def create_password_reset_token(document):
+    ensure_password_reset_indexes()
+    return db.password_reset_tokens.insert_one(document)
+
+def get_password_reset_token(token_hash):
+    ensure_password_reset_indexes()
+    return db.password_reset_tokens.find_one({"token_hash": token_hash})
+
+def mark_password_reset_token_used(token_id, used_at):
+    return db.password_reset_tokens.update_one(
+        {"_id": token_id if isinstance(token_id, ObjectId) else ObjectId(token_id), "used_at": None},
+        {"$set": {"used_at": used_at}}
+    )
+
 def get_alunos():
     users_collection = db.users
     alunos = list(users_collection.find({"tipoUsuario": "aluno"}))

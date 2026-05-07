@@ -3,7 +3,7 @@ import { PaginationProps } from 'antd/lib/pagination';
 import React, { useState } from 'react';
 
 interface CustomTableProps {
-    dataSource: any[];
+    dataSource: any;
     columns: any[];
     pagination?: PaginationProps | false;
     onChange?: (pagination: PaginationProps) => void;
@@ -22,9 +22,11 @@ const CustomTable: React.FC<CustomTableProps> = ({ dataSource, columns, paginati
         onChange?.(pagination);
     };
 
+    const safeDataSource = Array.isArray(dataSource) ? dataSource : [];
+
     return (
         <Table
-            dataSource={dataSource}
+            dataSource={safeDataSource}
             columns={columns}
             pagination={controlledPagination === undefined ? pagination : controlledPagination}
             onChange={handleTableChange}

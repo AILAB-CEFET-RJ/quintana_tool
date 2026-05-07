@@ -82,6 +82,9 @@ const Login = () => {
                     Entrar
                 </Button>
                 <Typography.Text style={{ textAlign: 'center', color: '#6b7280' }}>
+                    <Link href="/quintana/esqueci-senha">Esqueci minha senha</Link>
+                </Typography.Text>
+                <Typography.Text style={{ textAlign: 'center', color: '#6b7280' }}>
                     Não possui uma conta? <Link href="/quintana/cadastro">Cadastre-se</Link>.
                 </Typography.Text>
             </div>

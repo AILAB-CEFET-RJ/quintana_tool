@@ -101,6 +101,11 @@ JWT_SECRET=troque-esta-chave
 JWT_EXPIRATION_HOURS=8
 ANALYTICS_CACHE_TTL_SECONDS=300
 
+# Redefinição de senha. Em modo dev, o link é impresso no log do backend.
+FRONTEND_URL=http://localhost:3000
+PASSWORD_RESET_DEV_MODE=true
+PASSWORD_RESET_EXPIRATION_MINUTES=30
+
 # Serviços externos.
 OPENAI_API_KEY=dummy
 SUBSCRIPTION_KEY=
@@ -128,6 +133,12 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 Substitua `troque-esta-chave` pelo valor gerado. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
 
 **`ANALYTICS_CACHE_TTL_SECONDS`** controla por quantos segundos o backend reaproveita resultados dos painéis de análise do professor. Use `0` para desabilitar o cache.
+
+**`FRONTEND_URL`** é usado para montar o link de redefinição de senha. Em testes locais, use `http://localhost:3000`.
+
+**`PASSWORD_RESET_DEV_MODE=true`** faz o backend imprimir o link de redefinição no terminal, sem enviar e-mail real. Para oficinas e testes locais, use esse modo.
+
+**`PASSWORD_RESET_EXPIRATION_MINUTES`** controla por quantos minutos o link de redefinição continua válido.
 
 **`OPENAI_API_KEY`** é obrigatória para geração real de feedback via LLM. Para testar apenas cadastro, login e navegação, use `dummy`.
 

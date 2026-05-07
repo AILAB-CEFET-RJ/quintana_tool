@@ -178,10 +178,14 @@ const Home = () => {
 
             try {
                 const response = await authFetch(`${API_URL}/temas`);
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar temas');
+                }
                 const data = await response.json();
-                setTemasData(data);
+                setTemasData(Array.isArray(data) ? data : []);
             } catch (error) {
                 console.error('Erro ao buscar os temas:', error);
+                setTemasData([]);
             }
         };
 
@@ -207,10 +211,12 @@ const Home = () => {
                     throw new Error('Erro ao buscar redações');
                 }
                 const data = await response.json();
-                setRedacoesData(data.items || []);
-                setRedacoesTotal(data.total || 0);
+                setRedacoesData(Array.isArray(data.items) ? data.items : []);
+                setRedacoesTotal(Number(data.total) || 0);
             } catch (error) {
                 console.error('Erro ao buscar as redações:', error);
+                setRedacoesData([]);
+                setRedacoesTotal(0);
             }
         };
 
@@ -225,10 +231,14 @@ const Home = () => {
 
             try {
                 const response = await authFetch(`${API_URL}/users/alunos`);
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar alunos');
+                }
                 const data = await response.json();
-                setAlunos(data);
+                setAlunos(Array.isArray(data) ? data : []);
             } catch (error) {
                 console.error('Erro ao buscar alunos:', error);
+                setAlunos([]);
             }
         };
 
