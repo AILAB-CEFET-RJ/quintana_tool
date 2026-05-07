@@ -42,6 +42,44 @@ const buildAverageCompetencyRedacao = (redacoes: Redacao[]) => {
     };
 };
 
+const getRedacaoTimestamp = (redacao: Redacao) => {
+    const explicitDate = redacao.submitted_at || redacao.created_at;
+
+    if (explicitDate) {
+        const timestamp = new Date(explicitDate).getTime();
+        if (!Number.isNaN(timestamp)) {
+            return timestamp;
+        }
+    }
+
+    const objectIdTimestamp = parseInt(`${redacao._id || '00000000'}`.slice(0, 8), 16) * 1000;
+    return Number.isNaN(objectIdTimestamp) ? 0 : objectIdTimestamp;
+};
+
+const formatRedacaoDate = (redacao: Redacao) => {
+    const timestamp = getRedacaoTimestamp(redacao);
+
+    if (!timestamp) {
+        return '-';
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(timestamp));
+};
+
+const compareText = (a?: string, b?: string) => (
+    (a || '').localeCompare(b || '', 'pt-BR', { sensitivity: 'base' })
+);
+
+const compareNumber = (a?: number, b?: number) => (
+    (Number(a) || 0) - (Number(b) || 0)
+);
+
 export interface Tema {
     _id: string;
     nome_professor: string;
@@ -366,6 +404,7 @@ const Home = () => {
             title: 'Título',
             dataIndex: 'titulo',
             key: 'titulo',
+            sorter: (a: Redacao, b: Redacao) => compareText(a.titulo, b.titulo),
             render: (text: string, record: Redacao) => {
                 const titulo = text?.trim() ? text : 'sem título'
                 const tituloLimitado = titulo.length > 40 ? `${titulo.slice(0, 40)}...` : titulo
@@ -380,16 +419,46 @@ const Home = () => {
             },
             ellipsis: true,
         },
-        { title: 'Aluno', dataIndex: 'aluno', key: 'aluno', ellipsis: true },
+        tipoUsuario === 'aluno'
+            ? {
+                title: 'Data de submissão',
+                key: 'submitted_at',
+                render: (_: any, record: Redacao) => formatRedacaoDate(record),
+                sorter: (a: Redacao, b: Redacao) => getRedacaoTimestamp(a) - getRedacaoTimestamp(b),
+                align: 'center' as const,
+                ellipsis: true,
+            }
+            : {
+                title: 'Aluno',
+                dataIndex: 'aluno',
+                key: 'aluno',
+                sorter: (a: Redacao, b: Redacao) => compareText(a.aluno, b.aluno),
+                ellipsis: true,
+            },
         {
             title: 'Tema',
             dataIndex: 'id_tema',
             key: 'id_tema',
             render: (id_tema: string) => getTemaNome(id_tema),
+            sorter: (a: Redacao, b: Redacao) => compareText(getTemaNome(a.id_tema), getTemaNome(b.id_tema)),
             ellipsis: true
         },
-        { title: 'Nota total', dataIndex: 'nota_total', key: 'nota_total', align: 'center', ellipsis: true },
-        { title: 'Nota Professor', dataIndex: 'nota_professor', key: 'nota_professor', align: 'center', ellipsis: true },
+        {
+            title: 'Nota total',
+            dataIndex: 'nota_total',
+            key: 'nota_total',
+            align: 'center' as const,
+            sorter: (a: Redacao, b: Redacao) => compareNumber(a.nota_total, b.nota_total),
+            ellipsis: true,
+        },
+        {
+            title: 'Nota Professor',
+            dataIndex: 'nota_professor',
+            key: 'nota_professor',
+            align: 'center' as const,
+            sorter: (a: Redacao, b: Redacao) => compareNumber(a.nota_professor, b.nota_professor),
+            ellipsis: true,
+        },
     ];
 
     const visibleRedacoes = handleFilterRedacoes();
