@@ -1,6 +1,6 @@
 {
     "comentario": "type pode ser 'pkl' ou 'lora'",
-    "model": "lora",
+    "model": "principal",
     "available_models": [
         {
             "name": "principal",
