@@ -34,9 +34,9 @@ SENHA_PADRAO = "123456"
 SENHA_HASH = bcrypt.hashpw(SENHA_PADRAO.encode('utf-8'), bcrypt.gensalt())  # bytes
 
 PROFESSORES = [
-    {"username": "prof_mariana", "nome": "Profa. Dra. Mariana Oliveira", "email": "mariana.oliveira@quintana.local"},
-    {"username": "prof_rafael", "nome": "Prof. Dr. Rafael Mendes", "email": "rafael.mendes@quintana.local"},
-    {"username": "prof_carla", "nome": "Profa. Ma. Carla Santos", "email": "carla.santos@quintana.local"},
+    {"key": "prof_mariana", "nome": "Profa. Dra. Mariana Oliveira", "email": "mariana.oliveira@quintana.local"},
+    {"key": "prof_rafael", "nome": "Prof. Dr. Rafael Mendes", "email": "rafael.mendes@quintana.local"},
+    {"key": "prof_carla", "nome": "Profa. Ma. Carla Santos", "email": "carla.santos@quintana.local"},
 ]
 
 TURMAS_POR_PROFESSOR = {
@@ -80,25 +80,25 @@ class CorpusLoader:
     def criar_indices(self):
         print("\n🔎 GARANTINDO ÍNDICES")
         self.db.users.create_index("email")
-        self.db.users.create_index("username")
+        self.db.users.create_index("display_name")
         self.db.users.create_index("tipoUsuario")
         self.db.users.create_index("seed_batch")
-        self.db.temas.create_index("nome_professor")
+        self.db.temas.create_index("teacher_id")
         self.db.temas.create_index("seed_batch")
-        self.db.classes.create_index("teacher")
-        self.db.classes.create_index("students")
+        self.db.classes.create_index("teacher_id")
+        self.db.classes.create_index("student_ids")
         self.db.classes.create_index("seed_batch")
-        self.db.activities.create_index("teacher")
+        self.db.activities.create_index("teacher_id")
         self.db.activities.create_index("class_id")
-        self.db.activities.create_index([("teacher", 1), ("class_id", 1)])
+        self.db.activities.create_index([("teacher_id", 1), ("class_id", 1)])
         self.db.activities.create_index("theme_id")
         self.db.activities.create_index("seed_batch")
-        self.db.redacoes.create_index("aluno")
-        self.db.redacoes.create_index([("aluno", 1), ("created_at", -1)])
+        self.db.redacoes.create_index("student_id")
+        self.db.redacoes.create_index([("student_id", 1), ("created_at", -1)])
         self.db.redacoes.create_index("class_id")
         self.db.redacoes.create_index([("class_id", 1), ("created_at", -1)])
         self.db.redacoes.create_index("activity_id")
-        self.db.redacoes.create_index([("activity_id", 1), ("aluno", 1)])
+        self.db.redacoes.create_index([("activity_id", 1), ("student_id", 1)])
         self.db.redacoes.create_index("id_tema")
         self.db.redacoes.create_index([("id_tema", 1), ("created_at", -1)])
         self.db.redacoes.create_index("version_group_id")
@@ -122,19 +122,23 @@ class CorpusLoader:
             user_data = {
                 "email": prof["email"],
                 "password": SENHA_HASH,
-                "username": prof["username"],
+                "display_name": prof["nome"],
                 "tipoUsuario": "professor",
                 "seed_batch": self.seed_batch
             }
             result = self.db.users.insert_one(user_data)
-            self.professores[prof["username"]] = result.inserted_id
-            print(f"   ✅ Professor: {prof['username']}")
+            self.professores[prof["key"]] = {
+                "id": str(result.inserted_id),
+                "display_name": prof["nome"],
+                "email": prof["email"],
+            }
+            print(f"   ✅ Professor: {prof['email']}")
         
         # Alunos
         aluno_counter = 1
-        for prof_username, turmas in TURMAS_POR_PROFESSOR.items():
+        for prof_key, turmas in TURMAS_POR_PROFESSOR.items():
             for turma_nome in turmas:
-                turma_key = f"{prof_username}_{turma_nome}"
+                turma_key = f"{prof_key}_{turma_nome}"
                 self.alunos_por_turma[turma_key] = []
                 
                 for _ in range(ALUNOS_POR_TURMA):
@@ -145,14 +149,18 @@ class CorpusLoader:
                     user_data = {
                         "email": f"{username}@quintana.local",
                         "password": SENHA_HASH,
-                        "username": username,
+                        "display_name": f"{nome} {sobrenome}",
                         "tipoUsuario": "aluno",
                         "seed_batch": self.seed_batch
                     }
                     
                     result = self.db.users.insert_one(user_data)
-                    self.alunos[username] = result.inserted_id
-                    self.alunos_por_turma[turma_key].append(username)
+                    self.alunos[username] = {
+                        "id": str(result.inserted_id),
+                        "display_name": user_data["display_name"],
+                        "email": user_data["email"],
+                    }
+                    self.alunos_por_turma[turma_key].append(self.alunos[username])
                     aluno_counter += 1
         
         print(f"   ✅ Total de {aluno_counter - 1} alunos criados")
@@ -162,14 +170,16 @@ class CorpusLoader:
         
         for i, tema_nome in enumerate(redacoes_por_tema.keys()):
             if "beleza" in tema_nome.lower() or "mulher" in tema_nome.lower():
-                professor_username = "prof_mariana"
+                professor_key = "prof_mariana"
             elif "autoridade" in tema_nome.lower() or "abuso" in tema_nome.lower():
-                professor_username = "prof_rafael"
+                professor_key = "prof_rafael"
             else:
-                professor_username = PROFESSORES[i % len(PROFESSORES)]["username"]
+                professor_key = PROFESSORES[i % len(PROFESSORES)]["key"]
+            professor = self.professores[professor_key]
             
             tema_data = {
-                "nome_professor": professor_username,
+                "teacher_id": professor["id"],
+                "teacher_name": professor["display_name"],
                 "tema": tema_nome,
                 "descricao": f"Proposta de redação sobre: {tema_nome}",
                 "seed_batch": self.seed_batch
@@ -178,22 +188,24 @@ class CorpusLoader:
             result = self.db.temas.insert_one(tema_data)
             self.temas[tema_nome] = {
                 "id": result.inserted_id,
-                "professor": professor_username
+                "professor_key": professor_key,
+                "teacher_id": professor["id"]
             }
             print(f"   ✅ Tema: {tema_nome[:50]}...")
 
     def criar_turmas(self):
         print("\n🏫 CRIANDO TURMAS")
         
-        for prof_username, turmas_nomes in TURMAS_POR_PROFESSOR.items():
+        for prof_key, turmas_nomes in TURMAS_POR_PROFESSOR.items():
             for turma_nome in turmas_nomes:
-                turma_key = f"{prof_username}_{turma_nome}"
-                alunos_usernames = self.alunos_por_turma.get(turma_key, [])
+                turma_key = f"{prof_key}_{turma_nome}"
+                alunos_turma = self.alunos_por_turma.get(turma_key, [])
+                professor = self.professores[prof_key]
                 
                 turma_data = {
                     "name": turma_nome,
-                    "teacher": prof_username,
-                    "students": alunos_usernames,
+                    "teacher_id": professor["id"],
+                    "student_ids": [aluno["id"] for aluno in alunos_turma],
                     "created_at": gerar_data_iso(),
                     "updated_at": gerar_data_iso(),
                     "seed_batch": self.seed_batch
@@ -203,20 +215,22 @@ class CorpusLoader:
                 self.turmas[turma_key] = {
                     "id": result.inserted_id,
                     "nome": turma_nome,
-                    "professor": prof_username,
-                    "alunos": alunos_usernames
+                    "professor_key": prof_key,
+                    "teacher_id": professor["id"],
+                    "alunos": alunos_turma
                 }
-                print(f"   ✅ Turma '{turma_nome}': {len(alunos_usernames)} alunos")
+                print(f"   ✅ Turma '{turma_nome}': {len(alunos_turma)} alunos")
 
     def criar_atividades(self, redacoes_por_tema: Dict[str, List[Dict]]):
         print("\n📝 CRIANDO ATIVIDADES")
         
         atividade_count = 0
         for turma_key, turma_info in self.turmas.items():
-            professor_username = turma_info["professor"]
+            professor_key = turma_info["professor_key"]
+            professor_id = turma_info["teacher_id"]
             
             temas_do_professor = [(nome, info) for nome, info in self.temas.items() 
-                                  if info["professor"] == professor_username]
+                                  if info["professor_key"] == professor_key]
             
             if not temas_do_professor:
                 continue
@@ -233,7 +247,7 @@ class CorpusLoader:
                 
                 atividade_data = {
                     "title": f"Redação {i+1} - {tema_nome[:40]}",
-                    "teacher": professor_username,
+                    "teacher_id": professor_id,
                     "class_id": str(turma_info["id"]),
                     "theme_id": str(tema_info["id"]),
                     "due_date": due_date,
@@ -300,10 +314,13 @@ class CorpusLoader:
                     continue
                 
                 num_sem_entrega = max(1, int(len(alunos_turma) * 0.1))
-                alunos_sem_entrega = set(random.sample(alunos_turma, min(num_sem_entrega, len(alunos_turma))))
+                alunos_sem_entrega = {
+                    aluno["id"]
+                    for aluno in random.sample(alunos_turma, min(num_sem_entrega, len(alunos_turma)))
+                }
                 
-                for aluno_username in alunos_turma:
-                    if aluno_username in alunos_sem_entrega:
+                for aluno in alunos_turma:
+                    if aluno["id"] in alunos_sem_entrega:
                         continue
                     
                     redacao_original = random.choice(redacoes_disponiveis)
@@ -388,7 +405,8 @@ class CorpusLoader:
                         "texto": texto_original,
                         "nota_total": int(nota_total),
                         "id_tema": atividade["tema_id"],
-                        "aluno": aluno_username,
+                        "student_id": aluno["id"],
+                        "student_name": aluno["display_name"],
                         "nota_competencia_1_model": int(nota_c1),
                         "nota_competencia_2_model": int(nota_c2),
                         "nota_competencia_3_model": int(nota_c3),
@@ -540,8 +558,8 @@ def main():
     print(f"   Redações: {loader.db.redacoes.count_documents({'seed_batch': args.seed_batch})}")
     
     print(f"\n🔑 Senha padrão: {SENHA_PADRAO}")
-    print("   Professores: prof_mariana, prof_rafael, prof_carla")
-    print("   Alunos: aluno001 a aluno120")
+    print("   Professores: mariana.oliveira@quintana.local, rafael.mendes@quintana.local, carla.santos@quintana.local")
+    print("   Alunos: aluno001@quintana.local a aluno120@quintana.local")
 
 
 if __name__ == "__main__":

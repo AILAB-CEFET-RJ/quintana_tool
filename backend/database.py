@@ -17,7 +17,8 @@ REDACAO_LIST_PROJECTION = {
     "titulo": 1,
     "nota_total": 1,
     "id_tema": 1,
-    "aluno": 1,
+    "student_id": 1,
+    "student_name": 1,
     "nota_competencia_1_model": 1,
     "nota_competencia_2_model": 1,
     "nota_competencia_3_model": 1,
@@ -73,7 +74,7 @@ def insert_user(user_data, password):
     users_collection.insert_one({
         "email": user_data['email'],
         "password": password,
-        "username": user_data['nomeUsuario'],
+        "display_name": user_data['nomeUsuario'],
         "tipoUsuario": user_data.get('tipoUsuario', 'usuario'),
         "schema_version": 1
     })
@@ -86,9 +87,9 @@ def find_user_by_email(email):
     users_collection = db.users
     return users_collection.find_one({"email": email})
 
-def find_user_by_username(username):
+def find_user_by_id(user_id):
     users_collection = db.users
-    return users_collection.find_one({"username": username})
+    return users_collection.find_one({"_id": ObjectId(user_id)}) if user_id and ObjectId.is_valid(str(user_id)) else None
 
 def update_user_password(user_id, hashed_password):
     users_collection = db.users
@@ -162,7 +163,8 @@ def update_tema(id, data):
         {"$set": {
             "tema": data.get("tema"),
             "descricao": data.get("descricao"),
-            "nome_professor": data.get("nome_professor")
+            "teacher_id": data.get("teacher_id"),
+            "teacher_name": data.get("teacher_name")
         }}
     )
 
@@ -173,7 +175,7 @@ def delete_tema(id):
     return temas_collection.delete_one({"_id": id})
 
 def get_classes(teacher):
-    classes = list(db.classes.find({"teacher": teacher}))
+    classes = list(db.classes.find({"teacher_id": str(teacher)}))
     return [serialize_document(item) for item in classes]
 
 def create_class(data):
@@ -184,8 +186,8 @@ def update_class(id, data):
         {"_id": ObjectId(id)},
         {"$set": {
             "name": data.get("name"),
-            "teacher": data.get("teacher"),
-            "students": data.get("students", []),
+            "teacher_id": data.get("teacher_id"),
+            "student_ids": data.get("student_ids", []),
             "updated_at": data.get("updated_at"),
         }}
     )
@@ -194,7 +196,7 @@ def delete_class(id):
     return db.classes.delete_one({"_id": ObjectId(id)})
 
 def get_activities(teacher, class_id=None):
-    query = {"teacher": teacher}
+    query = {"teacher_id": str(teacher)}
     if class_id:
         query["class_id"] = class_id
     activities = list(db.activities.find(query))
@@ -208,7 +210,7 @@ def update_activity(id, data):
         {"_id": ObjectId(id)},
         {"$set": {
             "title": data.get("title"),
-            "teacher": data.get("teacher"),
+            "teacher_id": data.get("teacher_id"),
             "class_id": data.get("class_id"),
             "theme_id": data.get("theme_id"),
             "due_date": data.get("due_date"),
@@ -219,10 +221,10 @@ def update_activity(id, data):
 def delete_activity(id):
     return db.activities.delete_one({"_id": ObjectId(id)})
 
-def get_redacoes(user_name):
+def get_redacoes(user_id):
     redacoes_collection = db.redacoes
-    if user_name is not None:
-        redacoes = list(redacoes_collection.find({"aluno": user_name}))
+    if user_id is not None:
+        redacoes = list(redacoes_collection.find({"student_id": str(user_id)}))
     else:
         redacoes = list(redacoes_collection.find())
     for redacao in redacoes:
@@ -250,28 +252,29 @@ def paginate_redacoes(query, page=1, page_size=20, projection=None):
         "total": total,
     }
 
-def teacher_redacoes_query(teacher):
-    theme_ids = [str(item["_id"]) for item in db.temas.find({"nome_professor": teacher}, {"_id": 1})]
-    class_ids = [str(item["_id"]) for item in db.classes.find({"teacher": teacher}, {"_id": 1})]
-    activity_ids = [str(item["_id"]) for item in db.activities.find({"teacher": teacher}, {"_id": 1})]
+def teacher_redacoes_query(teacher_id):
+    teacher_id = str(teacher_id)
+    theme_ids = [str(item["_id"]) for item in db.temas.find({"teacher_id": teacher_id}, {"_id": 1})]
+    class_ids = [str(item["_id"]) for item in db.classes.find({"teacher_id": teacher_id}, {"_id": 1})]
+    activity_ids = [str(item["_id"]) for item in db.activities.find({"teacher_id": teacher_id}, {"_id": 1})]
     return {"$or": [
         {"id_tema": {"$in": theme_ids}},
         {"class_id": {"$in": class_ids}},
         {"activity_id": {"$in": activity_ids}},
     ]}
 
-def get_redacoes_page_for_student(student, page=1, page_size=20):
-    return paginate_redacoes({"aluno": student}, page, page_size)
+def get_redacoes_page_for_student(student_id, page=1, page_size=20):
+    return paginate_redacoes({"student_id": str(student_id)}, page, page_size)
 
 def get_redacoes_for_teacher(teacher):
     query = teacher_redacoes_query(teacher)
     redacoes = list(db.redacoes.find(query))
     return [serialize_redacao(item) for item in redacoes]
 
-def get_redacoes_page_for_teacher(teacher, page=1, page_size=20, student=None):
-    query = teacher_redacoes_query(teacher)
+def get_redacoes_page_for_teacher(teacher_id, page=1, page_size=20, student=None):
+    query = teacher_redacoes_query(teacher_id)
     if student:
-        query = {"$and": [query, {"aluno": student}]}
+        query = {"$and": [query, {"student_id": student}]}
     return paginate_redacoes(query, page, page_size)
 
 def create_redacoes(data):
@@ -325,7 +328,6 @@ def update_redacao(id, data):
     result = redacoes_collection.update_one(
         {"_id": object_id},
         {"$set": {
-            "nome_professor": data.get("nome_professor"),
             "nota_competencia_1_professor": data.get("nota_competencia_1_professor"),
             "nota_competencia_2_professor": data.get("nota_competencia_2_professor"),
             "nota_competencia_3_professor": data.get("nota_competencia_3_professor"),

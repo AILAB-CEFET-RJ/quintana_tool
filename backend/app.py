@@ -43,39 +43,47 @@ competencias = {
 }
 
 
-def activity_belongs_to_teacher(activity_id, teacher):
+def current_user_id():
+    return str(g.current_user.get("user_id", ""))
+
+
+def current_display_name():
+    return g.current_user.get("display_name", "")
+
+
+def activity_belongs_to_teacher(activity_id, teacher_id):
     if not activity_id or not ObjectId.is_valid(activity_id):
         return False
-    return database.db.activities.find_one({"_id": ObjectId(activity_id), "teacher": teacher}) is not None
+    return database.db.activities.find_one({"_id": ObjectId(activity_id), "teacher_id": str(teacher_id)}) is not None
 
 
-def class_belongs_to_teacher(class_id, teacher):
+def class_belongs_to_teacher(class_id, teacher_id):
     if not class_id or not ObjectId.is_valid(class_id):
         return False
-    return database.db.classes.find_one({"_id": ObjectId(class_id), "teacher": teacher}) is not None
+    return database.db.classes.find_one({"_id": ObjectId(class_id), "teacher_id": str(teacher_id)}) is not None
 
 
-def theme_belongs_to_teacher(theme_id, teacher):
+def theme_belongs_to_teacher(theme_id, teacher_id):
     if not theme_id or not ObjectId.is_valid(theme_id):
         return False
-    return database.db.temas.find_one({"_id": ObjectId(theme_id), "nome_professor": teacher}) is not None
+    return database.db.temas.find_one({"_id": ObjectId(theme_id), "teacher_id": str(teacher_id)}) is not None
 
 
 def redacao_belongs_to_user(redacao, user):
     if not redacao or not user:
         return False
 
-    username = user.get("username")
+    user_id = str(user.get("user_id", ""))
     role = user.get("tipoUsuario")
     if role == "aluno":
-        return redacao.get("aluno") == username
+        return redacao.get("student_id") == user_id
 
     if role == "professor":
-        if theme_belongs_to_teacher(redacao.get("id_tema"), username):
+        if theme_belongs_to_teacher(redacao.get("id_tema"), user_id):
             return True
-        if class_belongs_to_teacher(redacao.get("class_id"), username):
+        if class_belongs_to_teacher(redacao.get("class_id"), user_id):
             return True
-        if activity_belongs_to_teacher(redacao.get("activity_id"), username):
+        if activity_belongs_to_teacher(redacao.get("activity_id"), user_id):
             return True
 
     return False
@@ -102,21 +110,21 @@ def invalidate_analytics_for_redacao(redacao):
     teachers = set()
     theme_id = redacao.get("id_tema")
     if theme_id and ObjectId.is_valid(theme_id):
-        theme = database.db.temas.find_one({"_id": ObjectId(theme_id)}, {"nome_professor": 1})
-        if theme and theme.get("nome_professor"):
-            teachers.add(theme["nome_professor"])
+        theme = database.db.temas.find_one({"_id": ObjectId(theme_id)}, {"teacher_id": 1})
+        if theme and theme.get("teacher_id"):
+            teachers.add(theme["teacher_id"])
 
     class_id = redacao.get("class_id")
     if class_id and ObjectId.is_valid(class_id):
-        class_doc = database.db.classes.find_one({"_id": ObjectId(class_id)}, {"teacher": 1})
-        if class_doc and class_doc.get("teacher"):
-            teachers.add(class_doc["teacher"])
+        class_doc = database.db.classes.find_one({"_id": ObjectId(class_id)}, {"teacher_id": 1})
+        if class_doc and class_doc.get("teacher_id"):
+            teachers.add(class_doc["teacher_id"])
 
     activity_id = redacao.get("activity_id")
     if activity_id and ObjectId.is_valid(activity_id):
-        activity = database.db.activities.find_one({"_id": ObjectId(activity_id)}, {"teacher": 1})
-        if activity and activity.get("teacher"):
-            teachers.add(activity["teacher"])
+        activity = database.db.activities.find_one({"_id": ObjectId(activity_id)}, {"teacher_id": 1})
+        if activity and activity.get("teacher_id"):
+            teachers.add(activity["teacher_id"])
 
     for teacher in teachers:
         invalidate_teacher_analytics(teacher)
@@ -129,10 +137,16 @@ def build_activity_submission_status(activity_id):
 
     class_doc = database.db.classes.find_one({"_id": ObjectId(activity.get("class_id"))}) if ObjectId.is_valid(activity.get("class_id", "")) else None
     theme = database.db.temas.find_one({"_id": ObjectId(activity.get("theme_id"))}) if ObjectId.is_valid(activity.get("theme_id", "")) else None
-    expected_students = sorted(class_doc.get("students", [])) if class_doc else []
+    expected_student_ids = sorted(class_doc.get("student_ids", [])) if class_doc else []
+    users = {
+        str(item["_id"]): item.get("display_name", item.get("email", "Aluno"))
+        for item in database.db.users.find({"_id": {"$in": [ObjectId(value) for value in expected_student_ids if ObjectId.is_valid(value)]}})
+    }
     redacoes = list(database.db.redacoes.find({"activity_id": activity_id}))
-    submitted_students = sorted(set(redacao.get("aluno") for redacao in redacoes if redacao.get("aluno")))
-    missing_students = sorted(set(expected_students) - set(submitted_students))
+    submitted_student_ids = sorted(set(redacao.get("student_id") for redacao in redacoes if redacao.get("student_id")))
+    missing_student_ids = sorted(set(expected_student_ids) - set(submitted_student_ids))
+    submitted_students = [users.get(student_id, student_id) for student_id in submitted_student_ids]
+    missing_students = [users.get(student_id, student_id) for student_id in missing_student_ids]
     due_date = activity.get("due_date", "")
     today = datetime.now(timezone.utc).date().isoformat()
     late_students = missing_students if due_date and due_date < today else []
@@ -141,14 +155,14 @@ def build_activity_submission_status(activity_id):
         "activity": {
             "_id": str(activity["_id"]),
             "title": activity.get("title"),
-            "teacher": activity.get("teacher"),
+            "teacher_id": activity.get("teacher_id"),
             "class_id": activity.get("class_id"),
             "class_name": class_doc.get("name") if class_doc else "Turma não encontrada",
             "theme_id": activity.get("theme_id"),
             "theme": theme.get("tema") if theme else "Tema não encontrado",
             "due_date": due_date,
         },
-        "expected_students": expected_students,
+        "expected_students": [users.get(student_id, student_id) for student_id in expected_student_ids],
         "submitted_students": submitted_students,
         "missing_students": missing_students,
         "late_students": late_students,
@@ -279,14 +293,15 @@ def health():
 def post_model_response():
     essay = request.json['essay']
     id_theme = request.json['id']
-    student = g.current_user["username"]
+    student_id = current_user_id()
+    student_name = current_display_name()
     rewrite_of = request.json.get('rewrite_of')
     class_id = request.json.get('class_id')
     activity_id = request.json.get('activity_id')
     submitted_title = (request.json.get('title') or "").strip()
     if rewrite_of:
         parent_candidate = database.get_redacao_document(rewrite_of) if ObjectId.is_valid(rewrite_of) else None
-        if not parent_candidate or parent_candidate.get("aluno") != student:
+        if not parent_candidate or parent_candidate.get("student_id") != student_id:
             return jsonify({"error": "Redação de origem inválida"}), 403
 
     if submitted_title:
@@ -339,7 +354,8 @@ def post_model_response():
         "nota_total": sum(grades.values()),
         "nota_professor": "",
         "id_tema": id_theme,
-        "aluno": student,
+        "student_id": student_id,
+        "student_name": student_name,
         "feedback_llm": feedback_text_fallback,
         "competencias": competencias,
         "created_at": now,
@@ -406,7 +422,8 @@ def post_model_response():
 def post_model_response_witht_ocr():
     image = request.files['image']
     id_theme = request.form.get('id')
-    student = g.current_user["username"]
+    student_id = current_user_id()
+    student_name = current_display_name()
     class_id = request.form.get('class_id')
     activity_id = request.form.get('activity_id')
 
@@ -446,7 +463,8 @@ def post_model_response_witht_ocr():
         "nota_competencia_5_model": grades['nota5'],
         "nota_total": sum(grades.values()),
         "id_tema": id_theme,
-        "aluno": student,
+        "student_id": student_id,
+        "student_name": student_name,
         "feedback_llm": feedback_llm,
         "created_at": now,
         "updated_at": now,
@@ -484,7 +502,7 @@ def create_user():
 
     user_document = {
         **user_data,
-        "username": user_data['nomeUsuario'],
+        "display_name": user_data['nomeUsuario'],
         "password": hashed_password,
         "tipoUsuario": user_data.get('tipoUsuario', 'usuario'),
     }
@@ -507,9 +525,10 @@ def login():
     if user:
         if bcrypt.checkpw(user_data['password'].encode('utf-8'), user['password']):
             return jsonify({
+                "userId": str(user.get("_id")),
                 "tipoUsuario": user.get('tipoUsuario', 'usuario'),
-                "nomeUsuario": user.get('username'),
-                "token": create_token(user.get('username'), user.get('tipoUsuario', 'usuario'))
+                "nomeUsuario": user.get('display_name', user.get('email')),
+                "token": create_token(user.get("_id"), user.get('display_name', user.get('email')), user.get('tipoUsuario', 'usuario'))
             }), 200
         return jsonify({"error": "E-mail ou senha inválidos"}), 401
 
@@ -532,12 +551,12 @@ def request_password_reset():
         return auth_error
 
     if current_user:
-        authenticated_user = database.find_user_by_username(current_user.get("username"))
+        authenticated_user = database.find_user_by_id(current_user.get("user_id"))
         if not authenticated_user or authenticated_user.get("email") != email:
             if PASSWORD_RESET_DEV_MODE:
                 print(
                     f"[password-reset] Solicitacao bloqueada: usuario autenticado "
-                    f"{current_user.get('username')} tentou gerar link para {email}",
+                    f"{current_user.get('user_id')} tentou gerar link para {email}",
                     flush=True
                 )
             return jsonify({"error": "Saia da conta atual antes de solicitar redefinição para outro e-mail."}), 403
@@ -617,29 +636,30 @@ def get_alunos():
     return jsonify(alunos)
 
 
-@app.get("/professores/<nome_professor>/analytics")
+@app.get("/professores/<teacher_id>/analytics")
 @require_role("professor")
-def get_professor_analytics(nome_professor):
-    if nome_professor != g.current_user["username"]:
+def get_professor_analytics(teacher_id):
+    current_teacher_id = current_user_id()
+    if teacher_id != current_teacher_id:
         return jsonify({"error": "Acesso negado"}), 403
     class_id = request.args.get("class_id")
     activity_id = request.args.get("activity_id")
     group_by = request.args.get("group_by", "activity")
-    if class_id and not class_belongs_to_teacher(class_id, nome_professor):
+    if class_id and not class_belongs_to_teacher(class_id, current_teacher_id):
         return jsonify({"error": "Turma não pertence ao professor informado"}), 403
-    if activity_id and not activity_belongs_to_teacher(activity_id, nome_professor):
+    if activity_id and not activity_belongs_to_teacher(activity_id, current_teacher_id):
         return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
-    cached = get_cached_analytics(nome_professor, class_id, activity_id, group_by)
+    cached = get_cached_analytics(current_teacher_id, class_id, activity_id, group_by)
     if cached:
         return jsonify(cached)
-    analytics = build_teacher_analytics(nome_professor, class_id, activity_id, group_by)
-    return jsonify(set_cached_analytics(nome_professor, class_id, activity_id, group_by, analytics))
+    analytics = build_teacher_analytics(current_teacher_id, class_id, activity_id, group_by)
+    return jsonify(set_cached_analytics(current_teacher_id, class_id, activity_id, group_by, analytics))
 
 
 @app.get("/classes")
 @require_role("professor")
 def get_classes():
-    teacher = g.current_user["username"]
+    teacher = current_user_id()
 
     return jsonify(database.get_classes(teacher))
 
@@ -654,15 +674,15 @@ def create_class():
     now = datetime.now(timezone.utc).isoformat()
     class_data = {
         "name": data.get("name"),
-        "teacher": g.current_user["username"],
-        "students": data.get("students", []),
+        "teacher_id": current_user_id(),
+        "student_ids": data.get("student_ids", []),
         "created_at": now,
         "updated_at": now,
         "schema_version": 1,
     }
     validate_required_fields("classes", class_data)
     inserted_id = database.create_class(class_data).inserted_id
-    invalidate_teacher_analytics(g.current_user["username"])
+    invalidate_teacher_analytics(current_user_id())
     class_data["_id"] = str(inserted_id)
     return jsonify(class_data), 201
 
@@ -672,10 +692,10 @@ def create_class():
 def update_class(id):
     try:
         data = request.json
-        teacher = g.current_user["username"]
+        teacher = current_user_id()
         if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
-        data["teacher"] = teacher
+        data["teacher_id"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_class(id, data)
         invalidate_teacher_analytics(teacher)
@@ -691,7 +711,7 @@ def update_class(id):
 @require_role("professor")
 def delete_class(id):
     try:
-        teacher = g.current_user["username"]
+        teacher = current_user_id()
         if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
         result = database.delete_class(id)
@@ -706,7 +726,7 @@ def delete_class(id):
 @app.get("/activities")
 @require_role("professor")
 def get_activities():
-    teacher = g.current_user["username"]
+    teacher = current_user_id()
     class_id = request.args.get("class_id")
     if class_id and not class_belongs_to_teacher(class_id, teacher):
         return jsonify({"error": "Turma não pertence ao professor informado"}), 403
@@ -718,7 +738,7 @@ def get_activities():
 @require_role("professor")
 def create_activity():
     data = request.json
-    teacher = g.current_user["username"]
+    teacher = current_user_id()
     if 'title' not in data or 'class_id' not in data or 'theme_id' not in data:
         return jsonify({"error": "Dados insuficientes"}), 400
     if not class_belongs_to_teacher(data.get("class_id"), teacher):
@@ -729,7 +749,7 @@ def create_activity():
     now = datetime.now(timezone.utc).isoformat()
     activity_data = {
         "title": data.get("title"),
-        "teacher": teacher,
+        "teacher_id": teacher,
         "class_id": data.get("class_id"),
         "theme_id": data.get("theme_id"),
         "due_date": data.get("due_date", ""),
@@ -749,14 +769,14 @@ def create_activity():
 def update_activity(id):
     try:
         data = request.json
-        teacher = g.current_user["username"]
+        teacher = current_user_id()
         if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
         if data.get("class_id") and not class_belongs_to_teacher(data.get("class_id"), teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
         if data.get("theme_id") and not theme_belongs_to_teacher(data.get("theme_id"), teacher):
             return jsonify({"error": "Tema não pertence ao professor informado"}), 403
-        data["teacher"] = teacher
+        data["teacher_id"] = teacher
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = database.update_activity(id, data)
         invalidate_teacher_analytics(teacher)
@@ -772,7 +792,7 @@ def update_activity(id):
 @require_role("professor")
 def delete_activity(id):
     try:
-        teacher = g.current_user["username"]
+        teacher = current_user_id()
         if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
         result = database.delete_activity(id)
@@ -787,7 +807,7 @@ def delete_activity(id):
 @app.get("/activities/<id>/submissions")
 @require_role("professor")
 def get_activity_submissions(id):
-    teacher = g.current_user["username"]
+    teacher = current_user_id()
     if not activity_belongs_to_teacher(id, teacher):
         return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
 
@@ -806,7 +826,7 @@ def get_activity_submissions(id):
 def get_temas():
     temas = database.get_temas()
     if g.current_user.get("tipoUsuario") == "professor":
-        temas = [tema for tema in temas if tema.get("nome_professor") == g.current_user["username"]]
+        temas = [tema for tema in temas if tema.get("teacher_id") == current_user_id()]
     return jsonify(temas)
 
 
@@ -817,19 +837,20 @@ def create_tema():
     if 'tema' not in tema_data or 'descricao' not in tema_data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
-    tema_data["nome_professor"] = g.current_user["username"]
+    tema_data["teacher_id"] = current_user_id()
+    tema_data["teacher_name"] = current_display_name()
     validate_required_fields("temas", tema_data)
     database.create_tema(tema_data)
-    invalidate_teacher_analytics(g.current_user["username"])
+    invalidate_teacher_analytics(current_user_id())
     return jsonify({"message": "Tema criado com sucesso"}), 201
 
 
-@app.get("/students/<username>/activities")
+@app.get("/students/<student_id>/activities")
 @require_role("aluno")
-def get_student_activities(username):
-    if username != g.current_user["username"]:
+def get_student_activities(student_id):
+    if student_id != current_user_id():
         return jsonify({"error": "Acesso negado"}), 403
-    classes = list(database.db.classes.find({"students": username}))
+    classes = list(database.db.classes.find({"student_ids": student_id}))
     class_ids = [str(item["_id"]) for item in classes]
     activities = list(database.db.activities.find({"class_id": {"$in": class_ids}}))
     theme_ids = [item.get("theme_id") for item in activities]
@@ -839,7 +860,7 @@ def get_student_activities(username):
     }
     submitted = {
         item.get("activity_id")
-        for item in database.db.redacoes.find({"aluno": username, "activity_id": {"$in": [str(item["_id"]) for item in activities]}})
+        for item in database.db.redacoes.find({"student_id": student_id, "activity_id": {"$in": [str(item["_id"]) for item in activities]}})
     }
     class_map = {str(item["_id"]): item for item in classes}
 
@@ -875,7 +896,7 @@ def update_rewrite_checklist(id):
         redacao, response = get_authorized_redacao_or_404(id)
         if response:
             return response
-        if redacao.get("aluno") != g.current_user["username"]:
+        if redacao.get("student_id") != current_user_id():
             return jsonify({"error": "Acesso negado"}), 403
         data = request.json
         state = data.get("rewrite_checklist_state", {})
@@ -898,14 +919,15 @@ def update_rewrite_checklist(id):
 @require_role("professor")
 def update_tema(id):
     try:
-        if not theme_belongs_to_teacher(id, g.current_user["username"]):
+        if not theme_belongs_to_teacher(id, current_user_id()):
             return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)
         data = request.json
-        data["nome_professor"] = g.current_user["username"]
+        data["teacher_id"] = current_user_id()
+        data["teacher_name"] = current_display_name()
 
         result = database.update_tema(object_id, data)
-        invalidate_teacher_analytics(g.current_user["username"])
+        invalidate_teacher_analytics(current_user_id())
 
         if result.matched_count == 1:
             if result.modified_count == 1:
@@ -922,11 +944,11 @@ def update_tema(id):
 @require_role("professor")
 def delete_tema(id):
     try:
-        if not theme_belongs_to_teacher(id, g.current_user["username"]):
+        if not theme_belongs_to_teacher(id, current_user_id()):
             return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)
         result = database.delete_tema(object_id)
-        invalidate_teacher_analytics(g.current_user["username"])
+        invalidate_teacher_analytics(current_user_id())
 
         if result.deleted_count == 1:
             return jsonify({"message": "Tema deletado com sucesso!"}), 200
@@ -942,10 +964,10 @@ def get_redacoes():
     page = request.args.get("page", 1)
     page_size = request.args.get("page_size", 20)
     if g.current_user.get("tipoUsuario") == "aluno":
-        redacoes = database.get_redacoes_page_for_student(g.current_user["username"], page, page_size)
+        redacoes = database.get_redacoes_page_for_student(current_user_id(), page, page_size)
     elif g.current_user.get("tipoUsuario") == "professor":
         student = request.args.get("student")
-        redacoes = database.get_redacoes_page_for_teacher(g.current_user["username"], page, page_size, student)
+        redacoes = database.get_redacoes_page_for_teacher(current_user_id(), page, page_size, student)
     else:
         redacoes = {"items": [], "page": int(page), "page_size": int(page_size), "total": 0}
     return jsonify(redacoes)
@@ -958,7 +980,8 @@ def create_redacao():
     if 'titulo_redacao' not in redacao_data or 'id_tema' not in redacao_data:
         return jsonify({"error": "Dados insuficientes"}), 400
 
-    redacao_data["aluno"] = g.current_user["username"]
+    redacao_data["student_id"] = current_user_id()
+    redacao_data["student_name"] = current_display_name()
     database.create_redacoes(redacao_data)
     return jsonify({"message": "Redação criada com sucesso"}), 201
 

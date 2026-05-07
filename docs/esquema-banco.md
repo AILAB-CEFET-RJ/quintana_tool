@@ -25,7 +25,7 @@ Este documento resume as coleções e seus principais campos.
   "_id": "...",
   "email": "aluno@example.com",
   "password": "<bcrypt>",
-  "username": "aluno1",
+  "display_name": "Maria Silva",
   "tipoUsuario": "aluno",
   "schema_version": 1
 }
@@ -38,7 +38,8 @@ Este documento resume as coleções e seus principais campos.
 ```json
 {
   "_id": "...",
-  "nome_professor": "professor1",
+  "teacher_id": "...",
+  "teacher_name": "Profa. Mariana Oliveira",
   "tema": "Desinformação",
   "descricao": "Texto da proposta..."
 }
@@ -51,7 +52,8 @@ Este documento resume as coleções e seus principais campos.
   "_id": "...",
   "titulo": "Título da redação",
   "texto": "Texto...",
-  "aluno": "aluno1",
+  "student_id": "...",
+  "student_name": "Maria Silva",
   "id_tema": "...",
   "nota_total": 640,
   "nota_competencia_1_model": 160,
@@ -97,8 +99,8 @@ Observações:
 {
   "_id": "...",
   "name": "3001 - Manhã",
-  "teacher": "professor1",
-  "students": ["aluno1", "aluno2"],
+  "teacher_id": "...",
+  "student_ids": ["...", "..."],
   "created_at": "2026-04-30T...",
   "updated_at": "2026-04-30T...",
   "schema_version": 1
@@ -111,7 +113,7 @@ Observações:
 {
   "_id": "...",
   "title": "Redação 3",
-  "teacher": "professor1",
+  "teacher_id": "...",
   "class_id": "...",
   "theme_id": "...",
   "due_date": "2026-05-10",

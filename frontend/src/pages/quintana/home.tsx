@@ -82,7 +82,8 @@ const compareNumber = (a?: number, b?: number) => (
 
 export interface Tema {
     _id: string;
-    nome_professor: string;
+    teacher_id: string;
+    teacher_name?: string;
     tema: string;
     descricao: string;
 }
@@ -104,7 +105,8 @@ export interface Redacao {
     nota_competencia_5_professor: number;
     id_tema: string;
     _id: string;
-    aluno: string;
+    student_id: string;
+    student_name?: string;
     comentarios: string;
     feedback_llm: string;
     feedback_professor: string;
@@ -145,7 +147,7 @@ const Home = () => {
     const [selectedClassId, setSelectedClassId] = useState<string>('todos');
     const [selectedActivityId, setSelectedActivityId] = useState<string>('todos');
     const [analyticsGroupBy, setAnalyticsGroupBy] = useState<string>('activity');
-    const { isLoggedIn, tipoUsuario, nomeUsuario, token } = useAuth();
+    const { isLoggedIn, userId, tipoUsuario, nomeUsuario, token } = useAuth();
 
     const handleTabChange = (key: string) => {
         setActiveKey(key);
@@ -247,7 +249,7 @@ const Home = () => {
 
     useEffect(() => {
         const fetchTeacherAnalytics = async () => {
-            if (tipoUsuario !== 'professor' || !nomeUsuario || activeKey !== '3') {
+            if (tipoUsuario !== 'professor' || !userId || activeKey !== '3') {
                 return;
             }
 
@@ -263,7 +265,7 @@ const Home = () => {
                 }
                 params.append('group_by', analyticsGroupBy);
                 const query = params.toString();
-                const response = await authFetch(`${API_URL}/professores/${encodeURIComponent(nomeUsuario)}/analytics${query ? `?${query}` : ''}`);
+                const response = await authFetch(`${API_URL}/professores/${encodeURIComponent(userId)}/analytics${query ? `?${query}` : ''}`);
                 if (!response.ok) {
                     throw new Error('Erro ao buscar análise da turma');
                 }
@@ -278,16 +280,16 @@ const Home = () => {
         };
 
         fetchTeacherAnalytics();
-    }, [tipoUsuario, nomeUsuario, activeKey, selectedClassId, selectedActivityId, analyticsGroupBy]);
+    }, [tipoUsuario, userId, activeKey, selectedClassId, selectedActivityId, analyticsGroupBy]);
 
     useEffect(() => {
         const fetchStudentActivities = async () => {
-            if (tipoUsuario !== 'aluno' || !nomeUsuario || activeKey !== '3') {
+            if (tipoUsuario !== 'aluno' || !userId || activeKey !== '3') {
                 return;
             }
 
             try {
-                const response = await authFetch(`${API_URL}/students/${encodeURIComponent(nomeUsuario)}/activities`);
+                const response = await authFetch(`${API_URL}/students/${encodeURIComponent(userId)}/activities`);
                 if (response.ok) {
                     setStudentActivities(await response.json());
                 }
@@ -297,10 +299,10 @@ const Home = () => {
         };
 
         fetchStudentActivities();
-    }, [tipoUsuario, nomeUsuario, activeKey]);
+    }, [tipoUsuario, userId, activeKey]);
 
     const fetchTeacherStructure = async () => {
-        if (tipoUsuario !== 'professor' || !nomeUsuario || (activeKey !== '3' && activeKey !== '4')) {
+        if (tipoUsuario !== 'professor' || !userId || (activeKey !== '3' && activeKey !== '4')) {
             return;
         }
 
@@ -324,7 +326,7 @@ const Home = () => {
 
     useEffect(() => {
         fetchTeacherStructure();
-    }, [tipoUsuario, nomeUsuario, activeKey]);
+    }, [tipoUsuario, userId, activeKey]);
 
     const handleDeleteTema = async (id: string) => {
         try {
@@ -356,26 +358,26 @@ const Home = () => {
     };
 
     const handleFilterTemas = () => {
-        return temasData.filter(tema => tema.nome_professor === nomeUsuario);
+        return temasData.filter(tema => tema.teacher_id === userId);
     };
 
     const handleFilterRedacoes = () => {
         if (filter === 'meus') {
             return redacoesData.filter(redacao => {
-                return temasData.find(tema => tema._id === redacao.id_tema && tema.nome_professor === nomeUsuario);
+                return temasData.find(tema => tema._id === redacao.id_tema && tema.teacher_id === userId);
             });
         }
 
         if (filterAluno !== 'todos') {
             return redacoesData.filter(redacao => {
-                return redacao.aluno === filterAluno
+                return redacao.student_id === filterAluno
             })
         }
         return redacoesData;
     };
 
     const temasColumns = [
-        { title: 'Professor', dataIndex: 'nome_professor', key: 'nome_professor', ellipsis: true },
+        { title: 'Professor', dataIndex: 'teacher_name', key: 'teacher_name', ellipsis: true },
         {
             title: 'Tema',
             dataIndex: 'tema',
@@ -390,7 +392,7 @@ const Home = () => {
             title: 'Ações',
             key: 'acoes',
             render: (record: Tema) => (
-                tipoUsuario === 'professor' && record.nome_professor === nomeUsuario ? (
+                tipoUsuario === 'professor' && record.teacher_id === userId ? (
                     <Tooltip title="Deletar tema">
                         <Button onClick={() => handleDeleteTema(record._id)} danger icon={<DeleteOutlined />} />
                     </Tooltip>
@@ -440,9 +442,9 @@ const Home = () => {
             }
             : {
                 title: 'Aluno',
-                dataIndex: 'aluno',
-                key: 'aluno',
-                sorter: (a: Redacao, b: Redacao) => compareText(a.aluno, b.aluno),
+                dataIndex: 'student_name',
+                key: 'student_name',
+                sorter: (a: Redacao, b: Redacao) => compareText(a.student_name, b.student_name),
                 ellipsis: true,
             },
         {
@@ -579,8 +581,8 @@ const Home = () => {
                             >
                                 <Option value="todos">Todos os Alunos</Option>
                                 {alunos.map(aluno => (
-                                    <Option key={aluno._id} value={aluno.username}>
-                                        {aluno.username}
+                                    <Option key={aluno._id} value={aluno._id}>
+                                        {aluno.display_name || aluno.email}
                                     </Option>
                                 ))}
                             </Select>
@@ -672,7 +674,7 @@ const Home = () => {
                 {tipoUsuario === 'professor' && (
                     <TabPane tab="Turmas e atividades" key="4">
                         <TeacherClassActivityManager
-                            teacher={nomeUsuario}
+                            teacher={userId}
                             alunos={alunos}
                             temas={temasData}
                             onChanged={fetchTeacherStructure}

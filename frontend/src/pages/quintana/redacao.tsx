@@ -70,7 +70,6 @@ const Redacao = () => {
       essay: essay,
       title: essayTitle.trim(),
       id: id,
-      aluno: nomeUsuario,
       rewrite_of: rewriteOf || null,
       class_id: classId || null,
       activity_id: activityId || null

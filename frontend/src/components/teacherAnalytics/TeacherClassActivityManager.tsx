@@ -25,7 +25,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   const [activityForm] = Form.useForm()
   const [editClassForm] = Form.useForm()
   const [editActivityForm] = Form.useForm()
-  const teacherThemes = temas.filter((tema) => tema.nome_professor === teacher)
+  const teacherThemes = temas.filter((tema) => tema.teacher_id === teacher)
 
   const fetchData = async () => {
     if (!teacher) return
@@ -58,9 +58,8 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        teacher,
         name: values.name,
-        students: values.students || []
+        student_ids: values.student_ids || []
       })
     })
 
@@ -78,7 +77,6 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        teacher,
         title: values.title,
         class_id: values.class_id,
         theme_id: values.theme_id,
@@ -119,7 +117,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
     setEditingClass(record)
     editClassForm.setFieldsValue({
       name: record.name,
-      students: record.students || []
+      student_ids: record.student_ids || []
     })
   }
 
@@ -140,9 +138,8 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       method: 'PUT',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        teacher,
         name: values.name,
-        students: values.students || []
+        student_ids: values.student_ids || []
       })
     })
 
@@ -162,7 +159,6 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       method: 'PUT',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        teacher,
         title: values.title,
         class_id: values.class_id,
         theme_id: values.theme_id,
@@ -197,11 +193,14 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
     { title: 'Turma', dataIndex: 'name', key: 'name' },
     {
       title: 'Alunos',
-      dataIndex: 'students',
-      key: 'students',
-      render: (students: string[]) => (
+      dataIndex: 'student_ids',
+      key: 'student_ids',
+      render: (studentIds: string[]) => (
         <Space wrap>
-          {(students || []).map((student) => <Tag key={student}>{student}</Tag>)}
+          {(studentIds || []).map((studentId) => {
+            const aluno = alunos.find((item) => item._id === studentId)
+            return <Tag key={studentId}>{aluno?.display_name || aluno?.email || studentId}</Tag>
+          })}
         </Space>
       )
     },
@@ -270,11 +269,11 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
           <Form.Item name="name" label="Nome da turma" rules={[{ required: true, message: 'Informe o nome da turma.' }]}>
             <Input placeholder="Ex.: 3001 - Manhã" />
           </Form.Item>
-          <Form.Item name="students" label="Alunos">
+          <Form.Item name="student_ids" label="Alunos">
             <Select
               mode="multiple"
               placeholder="Selecione os alunos"
-              options={alunos.map((aluno) => ({ label: aluno.username, value: aluno.username }))}
+              options={alunos.map((aluno) => ({ label: aluno.display_name || aluno.email, value: aluno._id }))}
             />
           </Form.Item>
           <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>Criar turma</Button>
@@ -318,10 +317,10 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
           <Form.Item name="name" label="Nome da turma" rules={[{ required: true, message: 'Informe o nome da turma.' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="students" label="Alunos">
+          <Form.Item name="student_ids" label="Alunos">
             <Select
               mode="multiple"
-              options={alunos.map((aluno) => ({ label: aluno.username, value: aluno.username }))}
+              options={alunos.map((aluno) => ({ label: aluno.display_name || aluno.email, value: aluno._id }))}
             />
           </Form.Item>
         </Form>

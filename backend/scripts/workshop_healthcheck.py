@@ -51,7 +51,7 @@ def login(backend_url, email, password, label):
         f"{backend_url}/userLogin",
         {"email": email, "password": password},
     )
-    ok = status == 200 and payload.get("token") and payload.get("nomeUsuario")
+    ok = status == 200 and payload.get("token") and payload.get("nomeUsuario") and payload.get("userId")
     check(ok, f"Login {label}", f"status={status}")
     return payload if ok else None
 
@@ -108,7 +108,7 @@ def main():
 
     if professor:
         professor_token = professor["token"]
-        professor_username = professor["nomeUsuario"]
+        professor_id = professor["userId"]
         print("\n== Fluxo Professor ==")
 
         checks = [
@@ -117,7 +117,7 @@ def main():
             ("GET", "/classes", "Turmas"),
             ("GET", "/activities", "Atividades"),
             ("GET", "/redacoes?page=1&page_size=5", "Redações recebidas"),
-            ("GET", f"/professores/{professor_username}/analytics", "Analytics do professor"),
+            ("GET", f"/professores/{professor_id}/analytics", "Analytics do professor"),
         ]
 
         for method, path, label in checks:
@@ -127,13 +127,13 @@ def main():
 
     if student:
         student_token = student["token"]
-        student_username = student["nomeUsuario"]
+        student_id = student["userId"]
         print("\n== Fluxo Aluno ==")
 
         checks = [
             ("GET", "/temas", "Temas disponíveis"),
             ("GET", "/redacoes?page=1&page_size=5", "Minhas redações"),
-            ("GET", f"/students/{student_username}/activities", "Atividades do aluno"),
+            ("GET", f"/students/{student_id}/activities", "Atividades do aluno"),
         ]
 
         for method, path, label in checks:

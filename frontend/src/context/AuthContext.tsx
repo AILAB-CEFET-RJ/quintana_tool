@@ -10,11 +10,13 @@ import React, {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  userId: string;
   tipoUsuario: string;
   nomeUsuario: string;
   token: string;
   setAuthData: Dispatch<SetStateAction<{
     isLoggedIn: boolean;
+    userId: string;
     tipoUsuario: string;
     nomeUsuario: string;
     token: string;
@@ -23,6 +25,7 @@ interface AuthContextType {
 
 const defaultAuthContext: AuthContextType = {
   isLoggedIn: false,
+  userId: '',
   tipoUsuario: '',
   nomeUsuario: '',
   token: '',
@@ -34,11 +37,13 @@ const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [authData, setAuthData] = useState<{
     isLoggedIn: boolean;
+    userId: string;
     tipoUsuario: string;
     nomeUsuario: string;
     token: string;
   }>({
     isLoggedIn: false,
+    userId: '',
     tipoUsuario: '',
     nomeUsuario: '',
     token: '',
@@ -48,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedAuth = localStorage.getItem('authData');
     if (storedAuth) {
       const parsedAuth = JSON.parse(storedAuth);
-      if (parsedAuth.isLoggedIn && !parsedAuth.token) {
+      if (parsedAuth.isLoggedIn && (!parsedAuth.token || !parsedAuth.userId)) {
         localStorage.removeItem('authData');
         return;
       }

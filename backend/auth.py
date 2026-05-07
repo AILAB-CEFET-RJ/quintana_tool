@@ -8,9 +8,10 @@ from config import JWT_EXPIRATION_HOURS, JWT_SECRET
 serializer = URLSafeTimedSerializer(JWT_SECRET, salt="quintana-auth")
 
 
-def create_token(username, tipo_usuario):
+def create_token(user_id, display_name, tipo_usuario):
     return serializer.dumps({
-        "username": username,
+        "user_id": str(user_id),
+        "display_name": display_name,
         "tipoUsuario": tipo_usuario,
     })
 

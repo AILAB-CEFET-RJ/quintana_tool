@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react';
 import { useState } from 'react';
 import { Alert, Button, Form, Input, Space, Typography, message } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
-import { useAuth } from '@/context';
 import router from 'next/router';
 import { API_URL } from '@/config/config';
 import PageShell from '@/components/ui/PageShell';
@@ -15,7 +14,6 @@ const Tema = () => {
     const [salvando, setSalvando] = useState(false);
     const [preview, setPreview] = useState({ nomeTema: '', descricaoTema: '' });
     const [form] = Form.useForm();
-    const { nomeUsuario } = useAuth();
 
     const handleCadastroTema = async (values: any) => {
         try {
@@ -27,7 +25,6 @@ const Tema = () => {
                     'Content-Type': 'application/json',
                 }),
                 body: JSON.stringify({
-                    nome_professor: nomeUsuario,
                     tema: values.nomeTema,
                     descricao: values.descricaoTema,
                 }),

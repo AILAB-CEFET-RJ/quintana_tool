@@ -13,13 +13,14 @@ class UserDocument(TypedDict, total=False):
     _id: str
     email: str
     password: bytes
-    username: str
+    display_name: str
     tipoUsuario: str
 
 
 class TemaDocument(TypedDict, total=False):
     _id: str
-    nome_professor: str
+    teacher_id: str
+    teacher_name: str
     tema: str
     descricao: str
 
@@ -72,7 +73,8 @@ class RedacaoDocument(TypedDict, total=False):
     nota_competencia_4_professor: float
     nota_competencia_5_professor: float
     id_tema: str
-    aluno: str
+    student_id: str
+    student_name: str
     feedback_llm: str
     feedback_professor: str
     competencias: Dict[str, str]
@@ -95,8 +97,8 @@ class RedacaoDocument(TypedDict, total=False):
 class ClassDocument(TypedDict, total=False):
     _id: str
     name: str
-    teacher: str
-    students: List[str]
+    teacher_id: str
+    student_ids: List[str]
     created_at: str
     updated_at: str
 
@@ -104,7 +106,7 @@ class ClassDocument(TypedDict, total=False):
 class ActivityDocument(TypedDict, total=False):
     _id: str
     title: str
-    teacher: str
+    teacher_id: str
     class_id: str
     theme_id: str
     due_date: str
@@ -135,12 +137,12 @@ class PasswordResetAttemptDocument(TypedDict, total=False):
 
 SCHEMAS: Dict[str, Dict[str, Any]] = {
     "users": {
-        "required": ["email", "password", "username", "tipoUsuario"],
+        "required": ["email", "password", "display_name", "tipoUsuario"],
         "optional": ["_id"],
     },
     "temas": {
-        "required": ["nome_professor", "tema", "descricao"],
-        "optional": ["_id"],
+        "required": ["teacher_id", "tema", "descricao"],
+        "optional": ["_id", "teacher_name"],
     },
     "redacoes": {
         "required": [
@@ -148,7 +150,7 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "texto",
             "nota_total",
             "id_tema",
-            "aluno",
+            "student_id",
             "nota_competencia_1_model",
             "nota_competencia_2_model",
             "nota_competencia_3_model",
@@ -180,14 +182,15 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "correction_source",
             "is_latest_version",
             "schema_version",
+            "student_name",
         ],
     },
     "classes": {
-        "required": ["name", "teacher", "students", "created_at", "updated_at"],
+        "required": ["name", "teacher_id", "student_ids", "created_at", "updated_at"],
         "optional": ["_id"],
     },
     "activities": {
-        "required": ["title", "teacher", "class_id", "theme_id", "created_at", "updated_at"],
+        "required": ["title", "teacher_id", "class_id", "theme_id", "created_at", "updated_at"],
         "optional": ["_id", "due_date"],
     },
     "password_reset_tokens": {

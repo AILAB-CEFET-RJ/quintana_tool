@@ -35,6 +35,7 @@ const Login = () => {
 
             const auth = {
                 isLoggedIn: true,
+                userId: data.userId,
                 tipoUsuario: data.tipoUsuario,
                 nomeUsuario: data.nomeUsuario,
                 token: data.token,

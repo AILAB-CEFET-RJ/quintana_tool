@@ -29,6 +29,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const handleLogout = () => {
         setAuthData({
             isLoggedIn: false,
+            userId: '',
             tipoUsuario: '',
             nomeUsuario: '',
             token: '',

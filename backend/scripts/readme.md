@@ -67,7 +67,7 @@ Cada arquivo JSON deve conter uma lista de objetos (ou um único objeto) com os 
 
 | Coleção | Quantidade |
 |---------|------------|
-| `users` (professores) | 3 fixos (prof_mariana, prof_rafael, prof_carla) |
+| `users` (professores) | 3 fixos |
 | `users` (alunos) | 120 (20 por turma × 6 turmas) |
 | `temas` | 1 por tema encontrado nos JSONs |
 | `classes` | 6 (2 por professor) |
@@ -79,8 +79,10 @@ Todos os documentos recebem o campo `seed_batch` com o valor informado, permitin
 ### Credenciais geradas
 
 - **Senha padrão:** `123456` (para professores e alunos)
-- **Professores:** `prof_mariana`, `prof_rafael`, `prof_carla`
-- **Alunos:** `aluno001` a `aluno120`
+- **Professores:** `mariana.oliveira@quintana.local`, `rafael.mendes@quintana.local`, `carla.santos@quintana.local`
+- **Alunos:** `aluno001@quintana.local` a `aluno120@quintana.local`
+
+O login usa `email`. Relações internas entre usuários, redações, turmas, temas e atividades usam `_id` em campos como `student_id`, `teacher_id` e `student_ids`.
 
 ### Limpar dados de um batch
 

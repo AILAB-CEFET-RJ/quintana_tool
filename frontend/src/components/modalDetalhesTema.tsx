@@ -27,8 +27,7 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
                     }),
                     body: JSON.stringify({
                         tema: temaEditado !== '' ? temaEditado : tema.tema,
-                        descricao: descricaoEditada !== '' ? descricaoEditada : tema.descricao,
-                        nome_professor: tema.nome_professor
+                        descricao: descricaoEditada !== '' ? descricaoEditada : tema.descricao
                     })
                 });
                 if (response.ok) {
@@ -57,7 +56,7 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
 
             {tema && tipoUsuario === 'aluno' ? (
                 <div>
-                    <p><b>Professor</b>: {tema.nome_professor}</p>
+                    <p><b>Professor</b>: {tema.teacher_name || 'Professor'}</p>
                     <p><b>Tema</b>: {tema.tema}</p>
                     <p>
                         <b>Descrição</b>:<br />
@@ -67,7 +66,7 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
             ) : tema && (
                 <div>
                     <label style={{ marginBottom: '10px' }}><b>Professor</b>:</label>
-                    <Input style={{ marginBottom: '10px' }} value={tema.nome_professor} disabled />
+                    <Input style={{ marginBottom: '10px' }} value={tema.teacher_name || 'Professor'} disabled />
                     <label style={{ marginBottom: '10px' }}><b>Tema</b>:</label>
                     <Input style={{ marginBottom: '10px' }} defaultValue={tema.tema} onChange={(e) => setTemaEditado(e.target.value)} />
                     <label style={{ marginBottom: '10px' }}><b>Descrição</b>:</label>

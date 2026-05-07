@@ -24,7 +24,7 @@ const Cadastro = () => {
         }
 
         if (!email || !password || !nomeUsuario) {
-            setErrorMessage('Preencha email, nome de usuário e senha.')
+            setErrorMessage('Preencha email, nome de exibição e senha.')
             return
         }
 
@@ -84,7 +84,7 @@ const Cadastro = () => {
                 <Input
                     size="large"
                     prefix={<UserOutlined />}
-                    placeholder="Nome de usuário"
+                    placeholder="Nome de exibição"
                     value={nomeUsuario}
                     onChange={e => setNomeUsuario(e.target.value)}
                 />

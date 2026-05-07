@@ -15,7 +15,8 @@ ANALYTICS_PROJECTION = {
     "titulo": 1,
     "nota_total": 1,
     "id_tema": 1,
-    "aluno": 1,
+    "student_id": 1,
+    "student_name": 1,
     "nota_competencia_1_model": 1,
     "nota_competencia_2_model": 1,
     "nota_competencia_3_model": 1,
@@ -51,25 +52,27 @@ def serialize_id(value):
     return value
 
 
-def theme_map_for_professor(professor_name):
+def theme_map_for_professor(professor_id):
     temas = list(database.db.temas.find(
-        {"nome_professor": professor_name},
-        {"tema": 1, "nome_professor": 1}
+        {"teacher_id": str(professor_id)},
+        {"tema": 1, "teacher_id": 1, "teacher_name": 1}
     ))
     return {
         str(tema["_id"]): {
             "_id": str(tema["_id"]),
             "tema": tema.get("tema", "Tema sem título"),
-            "nome_professor": tema.get("nome_professor"),
+            "teacher_id": tema.get("teacher_id"),
+            "teacher_name": tema.get("teacher_name"),
         }
         for tema in temas
     }
 
 
-def teacher_essays(professor_name, class_id=None, activity_id=None):
-    temas = theme_map_for_professor(professor_name)
-    class_ids = [str(item["_id"]) for item in database.db.classes.find({"teacher": professor_name}, {"_id": 1})]
-    activity_ids = [str(item["_id"]) for item in database.db.activities.find({"teacher": professor_name}, {"_id": 1})]
+def teacher_essays(professor_id, class_id=None, activity_id=None):
+    professor_id = str(professor_id)
+    temas = theme_map_for_professor(professor_id)
+    class_ids = [str(item["_id"]) for item in database.db.classes.find({"teacher_id": professor_id}, {"_id": 1})]
+    activity_ids = [str(item["_id"]) for item in database.db.activities.find({"teacher_id": professor_id}, {"_id": 1})]
     query = {"$or": [
         {"id_tema": {"$in": list(temas.keys())}},
         {"class_id": {"$in": class_ids}},
@@ -205,22 +208,24 @@ def build_heatmap(redacoes):
     by_student = {}
 
     for redacao in redacoes:
-        student = redacao.get("aluno") or "Aluno sem nome"
-        current = by_student.get(student)
+        student_id = redacao.get("student_id") or "unknown"
+        current = by_student.get(student_id)
 
         if current is None or object_id_time(redacao) > object_id_time(current):
-            by_student[student] = redacao
+            by_student[student_id] = redacao
 
     rows = []
-    for student, redacao in sorted(by_student.items()):
+    for student_id, redacao in sorted(by_student.items(), key=lambda item: item[1].get("student_name", item[0])):
+        student = redacao.get("student_name") or student_id or "Aluno sem nome"
         rows.append({
             "student": student,
+            "student_id": student_id,
             "scores": {
                 item["code"]: score(redacao, item["field"])
                 for item in COMPETENCIES
             },
             "total": score(redacao, "nota_total"),
-            "essay_count": len([item for item in redacoes if item.get("aluno") == student]),
+            "essay_count": len([item for item in redacoes if item.get("student_id") == student_id]),
             "redacao_id": str(redacao.get("_id")),
         })
 
@@ -407,7 +412,7 @@ def build_alerts(redacoes, distribution, heatmap, class_id=None, activity_id=Non
 
     by_student = {}
     for redacao in sorted(redacoes, key=object_id_time):
-        by_student.setdefault(redacao.get("aluno") or "Aluno sem nome", []).append(redacao)
+        by_student.setdefault(redacao.get("student_name") or redacao.get("student_id") or "Aluno sem nome", []).append(redacao)
 
     drops = []
     sharp_total_drops = []
@@ -466,9 +471,14 @@ def build_alerts(redacoes, distribution, heatmap, class_id=None, activity_id=Non
     if class_id and activity_id:
         class_doc = database.db.classes.find_one({"_id": ObjectId(class_id)}) if ObjectId.is_valid(class_id) else None
         if class_doc:
-            expected_students = set(class_doc.get("students", []))
-            submitted_students = set(redacao.get("aluno") for redacao in redacoes if redacao.get("activity_id") == activity_id)
-            missing = sorted(expected_students - submitted_students)
+            expected_students = set(class_doc.get("student_ids", []))
+            submitted_students = set(redacao.get("student_id") for redacao in redacoes if redacao.get("activity_id") == activity_id)
+            missing_ids = sorted(expected_students - submitted_students)
+            users = {
+                str(item["_id"]): item.get("display_name", item.get("email", "Aluno"))
+                for item in database.db.users.find({"_id": {"$in": [ObjectId(value) for value in missing_ids if ObjectId.is_valid(value)]}})
+            }
+            missing = [users.get(student_id, student_id) for student_id in missing_ids]
             if missing:
                 alerts.append({
                     "type": "missing_submission",
@@ -504,8 +514,8 @@ def build_alerts(redacoes, distribution, heatmap, class_id=None, activity_id=Non
     return alerts
 
 
-def build_teacher_analytics(professor_name, class_id=None, activity_id=None, group_by="activity"):
-    redacoes, temas = teacher_essays(professor_name, class_id, activity_id)
+def build_teacher_analytics(professor_id, class_id=None, activity_id=None, group_by="activity"):
+    redacoes, temas = teacher_essays(professor_id, class_id, activity_id)
     latest_redacoes = latest_versions(redacoes)
     distribution = build_distribution(latest_redacoes)
     ranking = build_ranking(distribution)
@@ -518,7 +528,7 @@ def build_teacher_analytics(professor_name, class_id=None, activity_id=None, gro
 
     return {
         "scope": {
-            "teacher": professor_name,
+            "teacher_id": professor_id,
             "class_id": class_id,
             "activity_id": activity_id,
             "group_by": group_by,

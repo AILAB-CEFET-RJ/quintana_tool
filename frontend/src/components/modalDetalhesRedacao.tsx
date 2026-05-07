@@ -157,7 +157,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                             <Card size="small" title="Redação" style={{ height: '100%' }}>
                                 <strong>{redacao.titulo?.trim() || 'Sem título'}</strong>
                                 <p style={{ margin: '6px 0 0', color: '#6b7280' }}>
-                                    {redacao.aluno} · Versão {redacao.version_number || 1}
+                                    {redacao.student_name || 'Aluno'} · Versão {redacao.version_number || 1}
                                 </p>
                             </Card>
                         </Col>
