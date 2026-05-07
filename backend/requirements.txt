@@ -11,3 +11,7 @@ certifi
 bcrypt
 ollama
 openai
+transformers 
+peft 
+torch 
+safetensors

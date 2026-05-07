@@ -20,7 +20,7 @@ def get_model_config(name):
     model = next((m for m in models if m['name'] == name), None)
     if not model:
         raise ValueError(f"Modelo '{name}' não encontrado. Disponíveis: {[m['name'] for m in models]}")
-    return model['path']
+    return model
 
 def get_computervision_client():
     subscription_key = os.getenv('SUBSCRIPTION_KEY')
@@ -44,17 +44,36 @@ def use_vectorizer(df_train):
 
     return df_vetorizado
 
-def evaluate_redacao(redacao):
-   
-    tupla = (redacao, )
-    texto_df = pd.DataFrame(tupla,columns = ['texto'])
-    modelo_salvo = pickle.load(open(get_model_config(config['model']), 'rb'))
-    result = modelo_salvo.predict(texto_df)
+def evaluate_redacao(redacao: str, conjunto: int = 1) -> dict:
+    model_config = get_model_config(config['model'])
+    model_type = model_config.get('type', 'pkl') 
+    model_path = model_config['path']
 
-    notas = {}
-    for i in range(1,6):
-        key = f"nota_{i}"
-        notas[key] = result[0][i-1]
+    if model_type == 'lora':
+        from predict import predict
+        resultados = predict(
+            texts=[redacao],
+            adapter_path=model_path,
+            strategy="truncate_512",
+            conjunto=conjunto,
+            as_scores=True,
+        )
+        pred = resultados[0]
+        notas = {f"nota_{i}": pred[f"c{i}"] for i in range(1, 6)}
+
+    elif model_type == 'pkl':
+        import pickle
+        import pandas as pd
+
+        tupla = (redacao,)
+        texto_df = pd.DataFrame(tupla, columns=['texto'])
+        texto_vetorizado = use_vectorizer(texto_df)
+        modelo_salvo = pickle.load(open(model_path, 'rb'))
+        result = modelo_salvo.predict(texto_vetorizado)
+        notas = {f"nota_{i}": result[0][i - 1] for i in range(1, 6)}
+
+    else:
+        raise ValueError(f"Tipo de modelo desconhecido: '{model_type}'")
 
     return notas
 

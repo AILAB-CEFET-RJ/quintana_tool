@@ -1,14 +1,16 @@
 {
-    "comentario": "Só trocar o nome na linha do model abaixo.",
-    "model": "principal",
+    "comentario": "type pode ser 'pkl' ou 'lora'",
+    "model": "lora",
     "available_models": [
         {
             "name": "principal",
-            "path": "model.pkl"
+            "path": "adapters/principal",
+            "type": "lora"
         },
         {
-            "name": "chekpoint_07_08",
-            "path": "checkpoint_07_08.pkl"
+            "name": "checkpoint_07_08",
+            "path": "checkpoint_07_08.pkl",
+            "type": "pkl"
         }
     ]
 }
