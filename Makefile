@@ -1,5 +1,5 @@
 COMPOSE_FILE := docker-compose.yml
-DOCKER_COMPOSE := docker-compose
+DOCKER_COMPOSE := docker compose
 
 setup-env:
 	cp .env.example .env
