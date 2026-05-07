@@ -102,6 +102,22 @@ def ensure_password_reset_indexes():
     db.password_reset_tokens.create_index("user_id")
     db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
 
+def ensure_password_reset_attempt_indexes():
+    db.password_reset_attempts.create_index([("kind", 1), ("key_hash", 1), ("created_at", -1)])
+    db.password_reset_attempts.create_index("created_at", expireAfterSeconds=86400)
+
+def count_password_reset_attempts(kind, key_hash, since):
+    ensure_password_reset_attempt_indexes()
+    return db.password_reset_attempts.count_documents({
+        "kind": kind,
+        "key_hash": key_hash,
+        "created_at": {"$gte": since},
+    })
+
+def create_password_reset_attempt(document):
+    ensure_password_reset_attempt_indexes()
+    return db.password_reset_attempts.insert_one(document)
+
 def invalidate_password_reset_tokens(user_id, used_at):
     return db.password_reset_tokens.update_many(
         {"user_id": str(user_id), "used_at": None},

@@ -112,6 +112,27 @@ class ActivityDocument(TypedDict, total=False):
     updated_at: str
 
 
+class PasswordResetTokenDocument(TypedDict, total=False):
+    _id: str
+    user_id: str
+    email: str
+    token_hash: str
+    created_at: Any
+    expires_at: Any
+    used_at: Any
+    requester_ip_hash: str
+    schema_version: int
+
+
+class PasswordResetAttemptDocument(TypedDict, total=False):
+    _id: str
+    kind: str
+    key_hash: str
+    requester_ip_hash: str
+    created_at: Any
+    schema_version: int
+
+
 SCHEMAS: Dict[str, Dict[str, Any]] = {
     "users": {
         "required": ["email", "password", "username", "tipoUsuario"],
@@ -168,6 +189,14 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
     "activities": {
         "required": ["title", "teacher", "class_id", "theme_id", "created_at", "updated_at"],
         "optional": ["_id", "due_date"],
+    },
+    "password_reset_tokens": {
+        "required": ["user_id", "email", "token_hash", "created_at", "expires_at", "used_at"],
+        "optional": ["_id", "requester_ip_hash", "schema_version"],
+    },
+    "password_reset_attempts": {
+        "required": ["kind", "key_hash", "created_at"],
+        "optional": ["_id", "requester_ip_hash", "schema_version"],
     },
 }
 

@@ -7,7 +7,17 @@ from pedagogy import build_structured_feedback, build_textual_feedback_from_stru
 from analytics import build_teacher_analytics
 from schemas import validate_required_fields
 from flask_cors import CORS
-from config import FRONTEND_URL, JWT_SECRET, PASSWORD_RESET_DEV_MODE, PASSWORD_RESET_EXPIRATION_MINUTES, get_cors_origins, should_expose_errors
+from config import (
+    FRONTEND_URL,
+    JWT_SECRET,
+    PASSWORD_RESET_DEV_MODE,
+    PASSWORD_RESET_EXPIRATION_MINUTES,
+    PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX,
+    PASSWORD_RESET_RATE_LIMIT_IP_MAX,
+    PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES,
+    get_cors_origins,
+    should_expose_errors,
+)
 from auth import create_token, decode_token, get_bearer_token, require_auth, require_role
 from analytics_cache import get_cached_analytics, invalidate_teacher_analytics, set_cached_analytics
 from email_service import send_password_reset_email
@@ -175,6 +185,11 @@ def hash_password_reset_token(token):
     return hashlib.sha256(f"{JWT_SECRET}:{token}".encode("utf-8")).hexdigest()
 
 
+def hash_password_reset_lookup(value):
+    normalized = (value or "").strip().lower()
+    return hashlib.sha256(f"{JWT_SECRET}:password-reset-lookup:{normalized}".encode("utf-8")).hexdigest()
+
+
 def build_password_reset_url(token):
     return f"{FRONTEND_URL}/quintana/redefinir-senha?token={token}"
 
@@ -183,6 +198,12 @@ def password_reset_generic_response():
     return jsonify({
         "message": "Se o e-mail estiver cadastrado, enviaremos instruções para redefinir a senha."
     }), 200
+
+
+def password_reset_rate_limit_response():
+    return jsonify({
+        "error": "Muitas solicitações de redefinição. Aguarde alguns minutos antes de tentar novamente."
+    }), 429
 
 
 def get_optional_current_user():
@@ -196,6 +217,49 @@ def get_optional_current_user():
         return None, (jsonify({"error": "Sessão expirada"}), 401)
     except BadSignature:
         return None, (jsonify({"error": "Token inválido"}), 401)
+
+
+def get_request_ip():
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def enforce_password_reset_rate_limit(email):
+    now = datetime.utcnow()
+    since = now - timedelta(minutes=PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES)
+    ip = get_request_ip()
+    email_hash = hash_password_reset_lookup(email)
+    ip_hash = hash_password_reset_lookup(ip)
+
+    email_attempts = database.count_password_reset_attempts("email", email_hash, since)
+    ip_attempts = database.count_password_reset_attempts("ip", ip_hash, since)
+
+    if email_attempts >= PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX or ip_attempts >= PASSWORD_RESET_RATE_LIMIT_IP_MAX:
+        if PASSWORD_RESET_DEV_MODE:
+            print(
+                f"[password-reset] Rate limit atingido para email_hash={email_hash[:10]} ip={ip}",
+                flush=True
+            )
+        return False
+
+    base_document = {
+        "created_at": now,
+        "requester_ip_hash": ip_hash,
+        "schema_version": 1,
+    }
+    database.create_password_reset_attempt({
+        **base_document,
+        "kind": "email",
+        "key_hash": email_hash,
+    })
+    database.create_password_reset_attempt({
+        **base_document,
+        "kind": "ip",
+        "key_hash": ip_hash,
+    })
+    return True
 
 
 @app.route("/")
@@ -460,6 +524,9 @@ def request_password_reset():
     if not email:
         return password_reset_generic_response()
 
+    if not enforce_password_reset_rate_limit(email):
+        return password_reset_rate_limit_response()
+
     current_user, auth_error = get_optional_current_user()
     if auth_error:
         return auth_error
@@ -494,7 +561,7 @@ def request_password_reset():
         "created_at": now,
         "expires_at": expires_at,
         "used_at": None,
-        "requester_ip": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "requester_ip_hash": hash_password_reset_lookup(get_request_ip()),
         "schema_version": 1,
     })
 

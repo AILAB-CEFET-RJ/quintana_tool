@@ -12,6 +12,15 @@ ANALYTICS_CACHE_TTL_SECONDS = int(os.getenv("ANALYTICS_CACHE_TTL_SECONDS", "300"
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 PASSWORD_RESET_DEV_MODE = os.getenv("PASSWORD_RESET_DEV_MODE", "true").strip().lower() == "true"
 PASSWORD_RESET_EXPIRATION_MINUTES = int(os.getenv("PASSWORD_RESET_EXPIRATION_MINUTES", "30"))
+PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES = int(os.getenv("PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES", "15"))
+PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX = int(os.getenv("PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX", "3"))
+PASSWORD_RESET_RATE_LIMIT_IP_MAX = int(os.getenv("PASSWORD_RESET_RATE_LIMIT_IP_MAX", "10"))
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() == "true"
 
 
 def get_cors_origins():

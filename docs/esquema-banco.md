@@ -15,6 +15,8 @@ Este documento resume as coleções e seus principais campos.
 - `redacoes`
 - `classes`
 - `activities`
+- `password_reset_tokens`
+- `password_reset_attempts`
 
 ## `users`
 
@@ -118,6 +120,43 @@ Observações:
   "schema_version": 1
 }
 ```
+
+## `password_reset_tokens`
+
+```json
+{
+  "_id": "...",
+  "user_id": "...",
+  "email": "aluno@example.com",
+  "token_hash": "<sha256>",
+  "created_at": "2026-05-07T...",
+  "expires_at": "2026-05-07T...",
+  "used_at": null,
+  "requester_ip_hash": "<sha256>",
+  "schema_version": 1
+}
+```
+
+Observações:
+
+- o token em texto puro nunca é salvo;
+- `expires_at` tem índice TTL;
+- tokens antigos do mesmo usuário são marcados como usados quando um novo link é gerado.
+
+## `password_reset_attempts`
+
+```json
+{
+  "_id": "...",
+  "kind": "email",
+  "key_hash": "<sha256>",
+  "requester_ip_hash": "<sha256>",
+  "created_at": "2026-05-07T...",
+  "schema_version": 1
+}
+```
+
+Essa coleção registra tentativas por e-mail e por IP para aplicar rate limiting no fluxo de redefinição de senha. Os registros têm expiração automática.
 
 ## Validação no backend
 

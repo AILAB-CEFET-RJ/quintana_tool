@@ -46,6 +46,9 @@ ANALYTICS_CACHE_TTL_SECONDS=300
 FRONTEND_URL=http://localhost:3000
 PASSWORD_RESET_DEV_MODE=true
 PASSWORD_RESET_EXPIRATION_MINUTES=30
+PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES=15
+PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX=3
+PASSWORD_RESET_RATE_LIMIT_IP_MAX=10
 OPENAI_API_KEY=dummy
 SUBSCRIPTION_KEY=
 ENDPOINT=
@@ -60,6 +63,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 Use a string gerada no `.env` ou no comando de subida. Se a chave for alterada, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
 
 Para redefinição de senha em oficina, mantenha `PASSWORD_RESET_DEV_MODE=true`. Nesse modo, o backend não envia e-mail real: ele imprime no terminal um link como `/quintana/redefinir-senha?token=...`. O link expira conforme `PASSWORD_RESET_EXPIRATION_MINUTES` e o token é salvo no MongoDB apenas em formato derivado, não em texto puro.
+
+O fluxo também registra tentativas de redefinição em `password_reset_attempts` e aplica limite por e-mail e por IP, configurado por `PASSWORD_RESET_RATE_LIMIT_*`. Quando `PASSWORD_RESET_DEV_MODE=false`, o backend usa SMTP para enviar o link ao e-mail do usuário.
 
 `MONGO_DB_NAME` permite separar bancos por oficina:
 

@@ -39,6 +39,8 @@ const EsqueciSenha = () => {
                 setErrorMessage('Não foi possível conectar ao backend.')
             } else if (axios.isAxiosError(error) && error.response?.data?.error) {
                 setErrorMessage(error.response.data.error)
+            } else if (axios.isAxiosError(error) && error.response?.status === 429) {
+                setErrorMessage('Muitas solicitações. Aguarde alguns minutos antes de tentar novamente.')
             } else {
                 setErrorMessage('Não foi possível processar a solicitação. Tente novamente.')
             }

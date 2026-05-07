@@ -105,6 +105,17 @@ ANALYTICS_CACHE_TTL_SECONDS=300
 FRONTEND_URL=http://localhost:3000
 PASSWORD_RESET_DEV_MODE=true
 PASSWORD_RESET_EXPIRATION_MINUTES=30
+PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES=15
+PASSWORD_RESET_RATE_LIMIT_EMAIL_MAX=3
+PASSWORD_RESET_RATE_LIMIT_IP_MAX=10
+
+# SMTP usado quando PASSWORD_RESET_DEV_MODE=false.
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=
+SMTP_USE_TLS=true
 
 # Serviços externos.
 OPENAI_API_KEY=dummy
@@ -139,6 +150,38 @@ Substitua `troque-esta-chave` pelo valor gerado. Se `JWT_SECRET` for alterado, o
 **`PASSWORD_RESET_DEV_MODE=true`** faz o backend imprimir o link de redefinição no terminal, sem enviar e-mail real. Para oficinas e testes locais, use esse modo.
 
 **`PASSWORD_RESET_EXPIRATION_MINUTES`** controla por quantos minutos o link de redefinição continua válido.
+
+**`PASSWORD_RESET_RATE_LIMIT_*`** controla o limite de solicitações por e-mail e por IP dentro da janela configurada. O objetivo é reduzir abuso do fluxo de recuperação de senha.
+
+Para envio real de e-mail, configure `PASSWORD_RESET_DEV_MODE=false` e preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` e `SMTP_USE_TLS`. Em oficinas locais, mantenha `PASSWORD_RESET_DEV_MODE=true`.
+
+### Configurar envio de redefinição de senha com Gmail
+
+Para testar envio real usando Gmail, use uma senha de app. Não use a senha principal da conta.
+
+Passos:
+
+1. Crie ou escolha uma conta Gmail para o Quintana.
+2. Ative a verificação em duas etapas na Conta Google.
+3. Acesse `https://myaccount.google.com/apppasswords`.
+4. Gere uma senha de app com um nome como `Quintana SMTP`.
+5. Copie a senha gerada e remova os espaços antes de usar no `.env`.
+
+Exemplo:
+
+```env
+PASSWORD_RESET_DEV_MODE=false
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=conta.quintana@gmail.com
+SMTP_PASSWORD=senha_de_app_sem_espacos
+SMTP_FROM=conta.quintana@gmail.com
+SMTP_USE_TLS=true
+```
+
+Depois de alterar o `.env`, reinicie o backend. Para testar, acesse `/quintana/login`, clique em `Esqueci minha senha` e informe o e-mail de um usuário existente. O link deve chegar na caixa de entrada do usuário. Verifique também a pasta de spam.
+
+Para uso contínuo ou maior volume, prefira um serviço transacional de e-mail, como Brevo, SendGrid, Mailgun ou Amazon SES. Gmail é suficiente para testes, mas tem limites e políticas próprias de envio.
 
 **`OPENAI_API_KEY`** é obrigatória para geração real de feedback via LLM. Para testar apenas cadastro, login e navegação, use `dummy`.
 
