@@ -23,4 +23,7 @@ update-nginx-proxy:
 	@sudo service nginx restart
 	@echo "✓ Nginx atualizado com IP $(IP) e reiniciado"
 
-restart: down up update-nginx-proxy
+restart: down up
+	@echo "Aguardando 3 minutos para os containers subirem..."
+	sleep 180
+	$(MAKE) update-nginx-proxy
