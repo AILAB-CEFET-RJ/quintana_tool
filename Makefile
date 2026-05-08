@@ -24,5 +24,8 @@ update-nginx-proxy:
 	@echo "✓ Nginx atualizado com IP $(IP) e reiniciado"
 
 restart: down up
-	sleep 100
+	@for i in 1 2 3 4 5; do \
+		echo "Aguardando... $$i/5 minutos"; \
+		sleep 60; \
+	done
 	$(MAKE) update-nginx-proxy
