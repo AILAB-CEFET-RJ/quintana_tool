@@ -1,4 +1,5 @@
-import { Alert, Card, Col, Empty, Row, Table, Tag } from 'antd'
+import { Alert, Card, Col, Empty, Row, Table, Tag, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type React from 'react'
 import type { CSSProperties } from 'react'
@@ -32,6 +33,12 @@ const TeacherAnalyticsPanel: React.FC<TeacherAnalyticsPanelProps> = ({ data }) =
 
   return (
     <div style={styles.wrapper}>
+      <Alert
+        type="info"
+        showIcon
+        message="Gráficos baseados na avaliação automática"
+        description="Os indicadores deste painel usam as notas automáticas geradas pela IA. Notas e feedbacks do professor são mantidos como uma camada separada de avaliação humana."
+      />
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
           <TeacherAlerts alerts={data.alerts || []} />
@@ -58,8 +65,17 @@ const TeacherAnalyticsPanel: React.FC<TeacherAnalyticsPanelProps> = ({ data }) =
   )
 }
 
+const analyticsTitle = (title: string) => (
+  <span>
+    {title}{' '}
+    <Tooltip title="Os indicadores deste painel usam as notas automáticas geradas pela IA.">
+      <InfoCircleOutlined style={{ color: '#6b7280' }} />
+    </Tooltip>
+  </span>
+)
+
 const TeacherAlerts: React.FC<{ alerts: any[] }> = ({ alerts }) => (
-  <Card title="Alertas pedagógicos" style={styles.card}>
+  <Card title={analyticsTitle('Alertas pedagógicos')} style={styles.card}>
     {alerts.length ? (
       <div style={styles.list}>
         {alerts.map((alert, index) => (
@@ -79,7 +95,7 @@ const TeacherAlerts: React.FC<{ alerts: any[] }> = ({ alerts }) => (
 )
 
 const ProblemRanking: React.FC<{ ranking: any[] }> = ({ ranking }) => (
-  <Card title="Competências que mais precisam de intervenção" style={styles.card}>
+  <Card title={analyticsTitle('Competências que mais precisam de intervenção')} style={styles.card}>
     <div style={styles.ranking}>
       {ranking.slice(0, 3).map((item) => (
         <div key={item.competency} style={styles.rankingItem}>
@@ -87,7 +103,7 @@ const ProblemRanking: React.FC<{ ranking: any[] }> = ({ ranking }) => (
           <div>
             <strong>{item.competency} - {item.title}</strong>
             <p style={styles.muted}>
-              Média da turma: {Math.round(item.average)}/200 · {item.below_120_percent}% abaixo de 120
+              Média IA da turma: {Math.round(item.average)}/200 · {item.below_120_percent}% abaixo de 120
             </p>
           </div>
         </div>
@@ -98,7 +114,7 @@ const ProblemRanking: React.FC<{ ranking: any[] }> = ({ ranking }) => (
 
 const CompetencyDistribution: React.FC<{ distribution: any[] }> = ({ distribution }) => {
   return (
-    <Card title="Distribuição da turma por competência" style={styles.card}>
+    <Card title={analyticsTitle('Distribuição da turma por competência')} style={styles.card}>
       <div style={styles.boxplotList}>
         {distribution.map((item) => (
           <div key={item.competency} style={styles.boxplotRow}>
@@ -175,7 +191,7 @@ const StudentHeatmap: React.FC<{ rows: any[] }> = ({ rows }) => {
   ]
 
   return (
-    <Card title="Heatmap aluno x competência" style={styles.card}>
+    <Card title={analyticsTitle('Heatmap aluno x competência')} style={styles.card}>
       <Table
         rowKey="student"
         dataSource={rows}
@@ -188,7 +204,7 @@ const StudentHeatmap: React.FC<{ rows: any[] }> = ({ rows }) => {
 }
 
 const PedagogicalGroups: React.FC<{ groups: any[] }> = ({ groups }) => (
-  <Card title="Grupos por necessidade pedagógica" style={styles.card}>
+  <Card title={analyticsTitle('Grupos por necessidade pedagógica')} style={styles.card}>
     {groups.length ? (
       <div style={styles.list}>
         {groups.map((group) => (
@@ -211,7 +227,7 @@ const PedagogicalGroups: React.FC<{ groups: any[] }> = ({ groups }) => (
 const ClassEvolution: React.FC<{ evolution: any[] }> = ({ evolution }) => {
   if (!evolution.length) {
     return (
-      <Card title="Evolução da turma ao longo das atividades" style={styles.card}>
+      <Card title={analyticsTitle('Evolução da turma ao longo das atividades')} style={styles.card}>
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Sem dados para evolução" />
       </Card>
     )
@@ -230,7 +246,7 @@ const ClassEvolution: React.FC<{ evolution: any[] }> = ({ evolution }) => {
   const points = evolution.map((item, index) => `${xFor(index)},${yFor(item.total_average)}`).join(' ')
 
   return (
-    <Card title="Evolução da turma ao longo das atividades" style={styles.card}>
+    <Card title={analyticsTitle('Evolução da turma ao longo das atividades')} style={styles.card}>
       <div style={{ overflowX: 'auto' }}>
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolução da turma">
           {[0, 250, 500, 750, 1000].map((tick) => {
@@ -272,7 +288,7 @@ const ThemePerformanceTable: React.FC<{ rows: any[] }> = ({ rows }) => {
   ]
 
   return (
-    <Card title="Comparação entre tema e desempenho" style={styles.card}>
+    <Card title={analyticsTitle('Comparação entre tema e desempenho')} style={styles.card}>
       <Table
         rowKey="theme_id"
         dataSource={rows}

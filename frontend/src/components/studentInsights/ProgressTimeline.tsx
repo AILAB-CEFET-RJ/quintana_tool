@@ -123,14 +123,14 @@ const ProgressTimeline: React.FC<ProgressTimelineProps> = ({ redacoes }) => {
       <div style={styles.header}>
         <div>
           <h3 style={styles.title}>Linha do tempo de progresso</h3>
-          <p style={styles.subtitle}>Evolução da nota total e das cinco competências ao longo das redações.</p>
+          <p style={styles.subtitle}>Evolução da nota IA total e das cinco competências avaliadas automaticamente ao longo das redações.</p>
         </div>
         <strong style={{ ...styles.delta, color: totalDelta >= 0 ? '#237804' : '#a8071a' }}>
           {totalDelta >= 0 ? '+' : ''}{Math.round(totalDelta)} desde a última
         </strong>
       </div>
       <div style={styles.scroll}>
-        <h4 style={styles.chartTitle}>Nota total</h4>
+        <h4 style={styles.chartTitle}>Nota IA total</h4>
         <svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Linha do tempo de progresso">
           {[0, 250, 500, 750, 1000].map((tick) => {
             const y = yFor(tick)
@@ -157,7 +157,7 @@ const ProgressTimeline: React.FC<ProgressTimelineProps> = ({ redacoes }) => {
       </div>
       <div style={styles.scroll}>
         <div style={styles.chartHeader}>
-          <h4 style={styles.chartTitle}>Evolução por competência</h4>
+          <h4 style={styles.chartTitle}>Evolução IA por competência</h4>
           <div style={styles.legend}>
             {competencySeries.map((item) => (
               <span key={item.code} style={styles.legendItem}>
