@@ -17,8 +17,28 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 from peft import PeftModel
 
-sys.path.insert(0, "utils")
-from long_text_strategies import apply_head_tail_token_ids, create_sliding_window_token_ids
+def apply_head_tail_token_ids(token_ids, payload_max_length):
+    if len(token_ids) <= payload_max_length:
+        return token_ids
+    head_len = payload_max_length // 2
+    tail_len = payload_max_length - head_len
+    return token_ids[:head_len] + token_ids[-tail_len:]
+
+
+def create_sliding_window_token_ids(token_ids, payload_max_length, stride, min_payload_length=32):
+    if len(token_ids) <= payload_max_length:
+        return [token_ids]
+    windows = []
+    start = 0
+    while start < len(token_ids):
+        window = token_ids[start : start + payload_max_length]
+        if len(window) < min_payload_length:
+            break
+        windows.append(window)
+        if start + payload_max_length >= len(token_ids):
+            break
+        start += stride
+    return windows or [token_ids[:payload_max_length]]
 
 
 BASE_MODEL_NAME = "FacebookAI/xlm-roberta-large"
@@ -112,7 +132,7 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
             raise ValueError(f"strategy inválida: '{strategy}'")
 
         for window_token_ids in windows:
-            merged = [tokenizer.bos_token_id] + window_token_ids + [tokenizer.eos_token_id]
+            merged = tokenizer.build_inputs_with_special_tokens(window_token_ids)
             all_input_ids.append(merged)
             all_attention_masks.append([1] * len(merged))
             all_essay_ids.append(essay_idx)
