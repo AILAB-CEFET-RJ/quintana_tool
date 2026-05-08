@@ -32,6 +32,16 @@ python backend/scripts/load_corpus_seed.py \
   --seed-batch corpus_2026_01
 ```
 
+Para gerar dados mais adequados a vídeos, demos e oficinas, com alunos âncora apresentando evolução positiva ao longo das atividades:
+
+```bash
+python backend/scripts/load_corpus_seed.py \
+  --input backend/data/tema-10.json backend/data/tema-34.json backend/data/tema-100.json \
+  --mongo-uri <url_banco> \
+  --seed-batch corpus_demo_sbbd \
+  --demo-progress
+```
+
 ### Argumentos
 
 | Argumento | Obrigatório | Padrão | Descrição |
@@ -41,6 +51,7 @@ python backend/scripts/load_corpus_seed.py \
 | `--seed-batch` | Não | `corpus_2026_01` | Identificador do lote; usado para isolar e limpar dados |
 | `--db-name` | Não | `textgrader` | Nome do banco de dados MongoDB |
 | `--clear-only` | Não | `false` | Se presente, apenas remove os dados do `seed_batch` informado, sem inserir nada |
+| `--demo-progress` | Não | `false` | Cria trajetórias controladas de evolução para alunos âncora usados em demonstrações |
 
 *Obrigatório quando `--clear-only` não é usado.
 
@@ -83,6 +94,40 @@ Todos os documentos recebem o campo `seed_batch` com o valor informado, permitin
 - **Alunos:** `aluno001@quintana.local` a `aluno120@quintana.local`
 
 O login usa `email`. Relações internas entre usuários, redações, turmas, temas e atividades usam `_id` em campos como `student_id`, `teacher_id` e `student_ids`.
+
+### Dados de demonstração com evolução
+
+Quando `--demo-progress` é usado, o script mantém a geração sintética normal para a turma, mas controla as notas e datas de alguns alunos para facilitar a demonstração das visualizações de progresso.
+
+Contas recomendadas:
+
+| Conta | Senha | Narrativa |
+|-------|-------|-----------|
+| `aluno001@quintana.local` | `123456` | Progresso claro, com foco na melhoria da C5 |
+| `aluno002@quintana.local` | `123456` | Melhora gradual em argumentação, com foco na C3 |
+| `aluno003@quintana.local` | `123456` | Trajetória oscilante, mas positiva, com foco na C4 |
+
+Trajetória principal para vídeo:
+
+```text
+aluno001: 520 -> 600 -> 680 -> 760 -> 840
+```
+
+O `aluno001` também recebe uma reescrita demonstrativa, com duas versões da mesma redação, permitindo mostrar a comparação entre versões no frontend.
+
+As redações geradas nesse modo recebem metadados auxiliares:
+
+```json
+{
+  "demo_profile": "progressivo_c5",
+  "demo_profile_label": "Progresso claro com foco em C5",
+  "demo_focus_competency": "C5",
+  "demo_sequence_index": 1,
+  "demo_target_total": 520
+}
+```
+
+Esses campos são usados apenas para depuração e curadoria da demonstração; as funcionalidades da aplicação continuam lendo os campos normais de redação, notas, versões, atividades e turmas.
 
 ### Limpar dados de um batch
 
