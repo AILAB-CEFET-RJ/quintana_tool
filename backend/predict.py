@@ -132,7 +132,7 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
             raise ValueError(f"strategy inválida: '{strategy}'")
 
         for window_token_ids in windows:
-            merged = tokenizer.build_inputs_with_special_tokens(window_token_ids)
+            merged = [tokenizer.bos_token_id] + window_token_ids + [tokenizer.eos_token_id]
             all_input_ids.append(merged)
             all_attention_masks.append([1] * len(merged))
             all_essay_ids.append(essay_idx)
