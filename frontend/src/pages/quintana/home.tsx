@@ -456,7 +456,7 @@ const Home = () => {
             ellipsis: true
         },
         {
-            title: 'Nota total',
+            title: 'Nota IA',
             dataIndex: 'nota_total',
             key: 'nota_total',
             align: 'center' as const,
@@ -464,7 +464,7 @@ const Home = () => {
             ellipsis: true,
         },
         {
-            title: 'Nota Professor',
+            title: 'Nota professor',
             dataIndex: 'nota_professor',
             key: 'nota_professor',
             align: 'center' as const,
@@ -493,8 +493,8 @@ const Home = () => {
             ? 'Quantidade de temas cadastrados por você.'
             : 'Quantidade de temas disponíveis para envio de redações.',
         ultimaNota: tipoUsuario === 'professor'
-            ? 'Nota total da redação mais recente na listagem atual.'
-            : 'Nota total da sua redação mais recente.',
+            ? 'Nota IA total da redação mais recente na listagem atual.'
+            : 'Nota IA total da sua redação mais recente.',
         prioridade: tipoUsuario === 'professor'
             ? 'Quantidade de estudantes cadastrados como alunos na plataforma.'
             : 'Competência com menor nota na sua redação mais recente.'
@@ -523,7 +523,7 @@ const Home = () => {
                     <Col xs={24} sm={12} lg={6}>
                         <Tooltip title={summaryTooltips.ultimaNota}>
                             <Card bordered={false} style={{ borderRadius: 8 }}>
-                                <Statistic title="Última nota" value={latestRedacao ? Math.round(Number(latestRedacao.nota_total) || 0) : 0} prefix={<TrophyOutlined />} />
+                                <Statistic title="Última nota IA" value={latestRedacao ? Math.round(Number(latestRedacao.nota_total) || 0) : 0} prefix={<TrophyOutlined />} />
                             </Card>
                         </Tooltip>
                     </Col>

@@ -258,7 +258,7 @@ const Redacao = () => {
         <Result
           status="success"
           title="Redação submetida com sucesso"
-          subTitle="A correção foi registrada. O feedback textual pode levar alguns instantes para aparecer nos detalhes da redação."
+          subTitle="A avaliação automática da IA foi registrada. O feedback IA pode levar alguns instantes para aparecer nos detalhes da redação."
           extra={[
             <Button key="home" type="primary" onClick={() => router.push('/quintana/home')}>
               Ver minhas redações
@@ -278,7 +278,7 @@ const Redacao = () => {
               <strong>Título:</strong> {essayTitle.trim() || 'Sem título'}
             </p>
             <Statistic
-              title="Nota total estimada"
+              title="Nota IA total"
               value={submittedTotal}
               suffix="/1000"
             />
@@ -288,7 +288,7 @@ const Redacao = () => {
                 return (
                   <Card key={competency.code} size="small" style={styles.gradeItem}>
                     <Statistic
-                      title={`${competency.code} - ${competency.title}`}
+                      title={`Nota IA ${competency.code} - ${competency.title}`}
                       value={Math.round(Number(value) || 0)}
                       suffix="/200"
                     />

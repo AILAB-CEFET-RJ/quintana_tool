@@ -163,12 +163,12 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                         </Col>
                         <Col xs={24} sm={12} md={6}>
                             <Card size="small">
-                                <Statistic title="Nota total" value={Math.round(Number(redacao.nota_total) || 0)} suffix="/1000" />
+                                <Statistic title="Nota IA" value={Math.round(Number(redacao.nota_total) || 0)} suffix="/1000" />
                             </Card>
                         </Col>
                         <Col xs={24} sm={12} md={6}>
                             <Card size="small">
-                                <Statistic title="Professor" value={redacao.nota_professor ? Math.round(Number(redacao.nota_professor)) : '-'} />
+                                <Statistic title="Nota professor" value={redacao.nota_professor ? Math.round(Number(redacao.nota_professor)) : '-'} />
                             </Card>
                         </Col>
                     </Row>
@@ -196,28 +196,28 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                                 label: 'Notas',
                                 children: (
                                     <Collapse style={labelStyle} defaultActiveKey={['modelo']}>
-                                        <Panel header="Notas competências - Modelo" key="modelo">
-                                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal </b></label>
+                                        <Panel header="Notas IA por competência" key="modelo">
+                                            <label style={labelStyle}><b>Nota IA C1 - Domínio da modalidade escrita formal </b></label>
                                             <Input style={inputStyle} value={redacao.nota_competencia_1_model} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                                            <label style={labelStyle}><b>Nota IA C2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
                                             <Input style={inputStyle} value={redacao.nota_competencia_2_model} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                                            <label style={labelStyle}><b>Nota IA C3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
                                             <Input style={inputStyle} value={redacao.nota_competencia_3_model} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                                            <label style={labelStyle}><b>Nota IA C4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
                                             <Input style={inputStyle} value={redacao.nota_competencia_4_model} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                                            <label style={labelStyle}><b>Nota IA C5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
                                             <Input style={inputStyle} value={redacao.nota_competencia_5_model} disabled />
                                         </Panel>
-                                        <Panel header="Notas competências - Professor" key="professor">
-                                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal</b></label>
+                                        <Panel header="Notas professor por competência" key="professor">
+                                            <label style={labelStyle}><b>Nota professor C1 - Domínio da modalidade escrita formal</b></label>
                                             <Input style={inputStyle} value={notaComp1Editada} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                                            <label style={labelStyle}><b>Nota professor C2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
                                             <Input style={inputStyle} value={notaComp2Editada} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                                            <label style={labelStyle}><b>Nota professor C3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
                                             <Input style={inputStyle} value={notaComp3Editada} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                                            <label style={labelStyle}><b>Nota professor C4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
                                             <Input style={inputStyle} value={notaComp4Editada} disabled />
-                                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                                            <label style={labelStyle}><b>Nota professor C5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
                                             <Input style={inputStyle} value={notaComp5Editada} disabled />
                                         </Panel>
                                     </Collapse>
@@ -243,8 +243,8 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                                 label: 'Feedback',
                                 children: (
                                     <Collapse defaultActiveKey={['llm']}>
-                                        <Panel header="Feedback do modelo" key="llm">{renderFeedback()}</Panel>
-                                        <Panel header="Feedback do professor" key="professor">
+                                        <Panel header="Feedback IA" key="llm">{renderFeedback()}</Panel>
+                                        <Panel header="Feedback professor" key="professor">
                                             <TextArea rows={14} style={inputStyle} value={feedbackProfessorEditada} disabled />
                                         </Panel>
                                     </Collapse>
@@ -266,44 +266,44 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                     <TextArea rows={20} style={inputStyle} value={redacao.texto}
                         disabled />
                     <Collapse style={labelStyle}>
-                        <Panel header="Notas competências - Professor" key="1">
-                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal</b></label>
+                        <Panel header="Notas professor por competência" key="1">
+                            <label style={labelStyle}><b>Nota professor C1 - Domínio da modalidade escrita formal</b></label>
                             <Input style={inputStyle} value={notaComp1Editada}
                                 onChange={(e) => setnotaComp1Editada(e.target.value)} />
-                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                            <label style={labelStyle}><b>Nota professor C2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
                             <Input style={inputStyle} value={notaComp2Editada}
                                 onChange={(e) => setnotaComp2Editada(e.target.value)} />
-                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                            <label style={labelStyle}><b>Nota professor C3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
                             <Input style={inputStyle} value={notaComp3Editada}
                                 onChange={(e) => setnotaComp3Editada(e.target.value)} />
-                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                            <label style={labelStyle}><b>Nota professor C4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
                             <Input style={inputStyle} value={notaComp4Editada}
                                 onChange={(e) => setnotaComp4Editada(e.target.value)} />
-                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                            <label style={labelStyle}><b>Nota professor C5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
                             <Input style={inputStyle} value={notaComp5Editada}
                                 onChange={(e) => setnotaComp5Editada(e.target.value)} />
                         </Panel>
-                        <Panel header="Feedbacks - Professor" key="2">
+                        <Panel header="Feedback professor" key="2">
                             <TextArea rows={20} style={inputStyle} value={feedbackProfessorEditada} onChange={(e) => setFeedbackProfessorEditada(e.target.value)} />
                         </Panel>
-                        <Panel header="Notas competências - Modelo" key="3">
-                            <label style={labelStyle}><b>Nota Competência 1 - Domínio da modalidade escrita formal </b></label>
+                        <Panel header="Notas IA por competência" key="3">
+                            <label style={labelStyle}><b>Nota IA C1 - Domínio da modalidade escrita formal </b></label>
                             <Input style={inputStyle} value={redacao.nota_competencia_1_model}
                                 disabled />
-                            <label style={labelStyle}><b>Nota Competência 2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
+                            <label style={labelStyle}><b>Nota IA C2 - Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa</b></label>
                             <Input style={inputStyle} value={redacao.nota_competencia_2_model}
                                 disabled />
-                            <label style={labelStyle}><b>Nota Competência 3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
+                            <label style={labelStyle}><b>Nota IA C3 - Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista</b></label>
                             <Input style={inputStyle} value={redacao.nota_competencia_3_model}
                                 disabled />
-                            <label style={labelStyle}><b>Nota Competência 4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
+                            <label style={labelStyle}><b>Nota IA C4 - Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação</b></label>
                             <Input style={inputStyle} value={redacao.nota_competencia_4_model}
                                 disabled />
-                            <label style={labelStyle}><b>Nota Competência 5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
+                            <label style={labelStyle}><b>Nota IA C5 - Proposta de intervenção com respeito aos direitos humanos</b></label>
                             <Input style={inputStyle} value={redacao.nota_competencia_5_model}
                                 disabled />
                         </Panel>
-                        <Panel header="Feedbacks" key="4">
+                        <Panel header="Feedback IA" key="4">
                             <div style={{ ...inputStyle, overflowY: 'auto', maxHeight: '400px' }}>
                                 <ReactMarkdown>
                                     {(redacao?.feedback_llm || '')
