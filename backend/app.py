@@ -42,6 +42,25 @@ competencias = {
     "comp5":"Proposta de intervenção com respeito aos direitos humanos",
 }
 
+COMPETENCY_CODES = ["C1", "C2", "C3", "C4", "C5"]
+
+
+def build_ordered_grade_payload(scores):
+    values = [float(value or 0) for value in scores]
+    return {
+        "grades_by_code": {
+            code: values[index] if index < len(values) else 0
+            for index, code in enumerate(COMPETENCY_CODES)
+        },
+        "competency_scores": [
+            {
+                "code": code,
+                "score": values[index] if index < len(values) else 0
+            }
+            for index, code in enumerate(COMPETENCY_CODES)
+        ]
+    }
+
 
 def current_user_id():
     return str(g.current_user.get("user_id", ""))
@@ -414,7 +433,18 @@ def post_model_response():
 
     Thread(target=gerar_feedback).start()
 
-    return jsonify({"grades": grades, "redacao_id": str(essay_id), "version_number": version_number})
+    return jsonify({
+        "grades": grades,
+        **build_ordered_grade_payload([
+            grades[competencias["comp1"]],
+            grades[competencias["comp2"]],
+            grades[competencias["comp3"]],
+            grades[competencias["comp4"]],
+            grades[competencias["comp5"]],
+        ]),
+        "redacao_id": str(essay_id),
+        "version_number": version_number
+    })
 
 
 @app.post("/model_ocr")
@@ -488,7 +518,16 @@ def post_model_response_witht_ocr():
     invalidate_analytics_for_redacao(essay_data)
 
     persist_essay(essay, obj)
-    return jsonify({"grades": obj})
+    return jsonify({
+        "grades": obj,
+        **build_ordered_grade_payload([
+            obj.get("nota_1", 0),
+            obj.get("nota_2", 0),
+            obj.get("nota_3", 0),
+            obj.get("nota_4", 0),
+            obj.get("nota_5", 0),
+        ])
+    })
 
 
 @app.post("/userRegister")

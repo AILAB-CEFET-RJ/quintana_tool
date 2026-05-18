@@ -13,6 +13,35 @@ import SectionPanel from '@/components/ui/SectionPanel'
 import type { CSSProperties } from 'react'
 import { COMPETENCIES } from '@/lib/competencias'
 
+const BACKEND_GRADE_KEYS = [
+  'Domínio da modalidade escrita formal',
+  'Compreender a proposta e aplicar conceitos das várias áreas de conhecimento para desenvolver o texto dissertativo-argumentativo em prosa',
+  'Selecionar, relacionar, organizar e interpretar informações em defesa de um ponto de vista',
+  'Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação',
+  'Proposta de intervenção com respeito aos direitos humanos'
+]
+
+const extractSubmittedGrades = (result: any) => {
+  if (!result) return []
+
+  if (Array.isArray(result.competency_scores)) {
+    return COMPETENCIES.map((competency) => {
+      const item = result.competency_scores.find((score: any) => score?.code === competency.code)
+      return Number(item?.score) || 0
+    })
+  }
+
+  if (result.grades_by_code) {
+    return COMPETENCIES.map((competency) => Number(result.grades_by_code[competency.code]) || 0)
+  }
+
+  if (result.grades) {
+    return BACKEND_GRADE_KEYS.map((key) => Number(result.grades[key]) || 0)
+  }
+
+  return []
+}
+
 
 const Redacao = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -139,7 +168,7 @@ const Redacao = () => {
 
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0
   const charCount = essay.length
-  const submittedGrades = submissionResult?.grades ? Object.values(submissionResult.grades) : []
+  const submittedGrades = extractSubmittedGrades(submissionResult)
   const submittedTotal = submittedGrades.reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)
 
   return (
