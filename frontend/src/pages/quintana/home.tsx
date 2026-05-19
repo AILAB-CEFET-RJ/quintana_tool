@@ -383,7 +383,7 @@ const Home = () => {
             dataIndex: 'tema',
             key: 'tema',
             render: (text: string, record: Tema) =>
-                <Tooltip title={tipoUsuario === 'aluno' ? "Detalhes do tema" : "Editar tema"}>
+                <Tooltip title={tipoUsuario === 'professor' && record.teacher_id === userId ? "Editar tema" : "Detalhes do tema"}>
                     <Button type="link" onClick={() => openModal(record)}>{text}</Button>
                 </Tooltip>, ellipsis: true,
         },
@@ -490,7 +490,7 @@ const Home = () => {
             ? 'Quantidade de redações disponíveis para consulta neste painel, considerando os filtros aplicados.'
             : 'Quantidade de redações que você já enviou, considerando as versões visíveis.',
         temas: tipoUsuario === 'professor'
-            ? 'Quantidade de temas cadastrados por você.'
+            ? 'Quantidade de temas disponíveis na plataforma.'
             : 'Quantidade de temas disponíveis para envio de redações.',
         ultimaNota: tipoUsuario === 'professor'
             ? 'Nota IA total da redação mais recente na listagem atual.'
@@ -516,7 +516,7 @@ const Home = () => {
                     <Col xs={24} sm={12} lg={6}>
                         <Tooltip title={summaryTooltips.temas}>
                             <Card bordered={false} style={{ borderRadius: 8 }}>
-                                <Statistic title="Temas disponíveis" value={tipoUsuario === 'professor' ? handleFilterTemas().length : temasData.length} prefix={<ReadOutlined />} />
+                                <Statistic title="Temas disponíveis" value={temasData.length} prefix={<ReadOutlined />} />
                             </Card>
                         </Tooltip>
                     </Col>

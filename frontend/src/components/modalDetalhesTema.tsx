@@ -15,7 +15,8 @@ interface TemaDetalhes {
 const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTemaEditado }) => {
     const [temaEditado, setTemaEditado] = useState<string>('');
     const [descricaoEditada, setDescricaoEditada] = useState<string>('');
-    const { tipoUsuario } = useAuth();
+    const { tipoUsuario, userId } = useAuth();
+    const canEdit = tipoUsuario === 'professor' && tema?.teacher_id === userId;
 
     const handleEditarTema = async () => {
         try {
@@ -48,13 +49,13 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
 
     return (
         <Modal
-            title={tipoUsuario === 'aluno' ? 'Detalhes do Tema' : 'Editar Tema'}
+            title={canEdit ? 'Editar Tema' : 'Detalhes do Tema'}
             open={open}
             onCancel={onCancel}
             footer={null}
         >
 
-            {tema && tipoUsuario === 'aluno' ? (
+            {tema && !canEdit ? (
                 <div>
                     <p><b>Professor</b>: {tema.teacher_name || 'Professor'}</p>
                     <p><b>Tema</b>: {tema.tema}</p>

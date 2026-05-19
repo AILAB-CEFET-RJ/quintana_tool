@@ -863,10 +863,7 @@ def get_activity_submissions(id):
 @app.get("/temas")
 @require_auth
 def get_temas():
-    temas = database.get_temas()
-    if g.current_user.get("tipoUsuario") == "professor":
-        temas = [tema for tema in temas if tema.get("teacher_id") == current_user_id()]
-    return jsonify(temas)
+    return jsonify(database.get_temas())
 
 
 @app.post("/temas")

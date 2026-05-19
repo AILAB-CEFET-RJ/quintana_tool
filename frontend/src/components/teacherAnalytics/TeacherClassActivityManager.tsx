@@ -2,7 +2,7 @@ import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Statistic,
 import { BarChartOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { API_URL } from '@/config/config'
 import type { Tema } from '@/pages/quintana/home'
 import { authFetch, authHeaders } from '@/lib/authFetch'
@@ -26,6 +26,17 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   const [editClassForm] = Form.useForm()
   const [editActivityForm] = Form.useForm()
   const teacherThemes = temas.filter((tema) => tema.teacher_id === teacher)
+  const studentOptions = useMemo(
+    () => alunos
+      .map((aluno) => ({
+        label: aluno.display_name || aluno.email || aluno._id,
+        value: aluno._id
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { sensitivity: 'base' })),
+    [alunos]
+  )
+  const filterStudentOption = (input: string, option?: { label?: string; value?: string }) =>
+    String(option?.label || '').toLowerCase().includes(input.trim().toLowerCase())
 
   const fetchData = async () => {
     if (!teacher) return
@@ -272,8 +283,12 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
           <Form.Item name="student_ids" label="Alunos">
             <Select
               mode="multiple"
+              showSearch
+              optionFilterProp="label"
+              filterOption={filterStudentOption}
               placeholder="Selecione os alunos"
-              options={alunos.map((aluno) => ({ label: aluno.display_name || aluno.email, value: aluno._id }))}
+              options={studentOptions}
+              maxTagCount="responsive"
             />
           </Form.Item>
           <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>Criar turma</Button>
@@ -320,7 +335,12 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
           <Form.Item name="student_ids" label="Alunos">
             <Select
               mode="multiple"
-              options={alunos.map((aluno) => ({ label: aluno.display_name || aluno.email, value: aluno._id }))}
+              showSearch
+              optionFilterProp="label"
+              filterOption={filterStudentOption}
+              placeholder="Selecione os alunos"
+              options={studentOptions}
+              maxTagCount="responsive"
             />
           </Form.Item>
         </Form>
