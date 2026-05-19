@@ -582,7 +582,7 @@ const Home = () => {
                                 <Option value="todos">Todos os Alunos</Option>
                                 {alunos.map(aluno => (
                                     <Option key={aluno._id} value={aluno._id}>
-                                        {aluno.display_name || aluno.email}
+                                        {aluno.display_name || 'Aluno sem nome'}
                                     </Option>
                                 ))}
                             </Select>

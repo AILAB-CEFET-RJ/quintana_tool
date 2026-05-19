@@ -29,7 +29,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   const studentOptions = useMemo(
     () => alunos
       .map((aluno) => ({
-        label: aluno.display_name || aluno.email || aluno._id,
+        label: aluno.display_name || 'Aluno sem nome',
         value: aluno._id
       }))
       .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { sensitivity: 'base' })),
@@ -210,7 +210,7 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
         <Space wrap>
           {(studentIds || []).map((studentId) => {
             const aluno = alunos.find((item) => item._id === studentId)
-            return <Tag key={studentId}>{aluno?.display_name || aluno?.email || studentId}</Tag>
+            return <Tag key={studentId}>{aluno?.display_name || 'Aluno'}</Tag>
           })}
         </Space>
       )

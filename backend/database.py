@@ -141,11 +141,15 @@ def mark_password_reset_token_used(token_id, used_at):
 
 def get_alunos():
     users_collection = db.users
-    alunos = list(users_collection.find({"tipoUsuario": "aluno"}))
+    alunos = list(users_collection.find(
+        {"tipoUsuario": "aluno"},
+        {"display_name": 1, "tipoUsuario": 1}
+    ))
 
     for aluno in alunos:
-        aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string
-        aluno.pop('password', None)  # Remove o campo 'password' para evitar problemas com bytes
+        aluno['_id'] = str(aluno['_id'])
+        if not aluno.get("display_name"):
+            aluno["display_name"] = "Aluno"
 
     return alunos
 
