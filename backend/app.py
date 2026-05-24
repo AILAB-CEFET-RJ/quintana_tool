@@ -156,7 +156,7 @@ def build_activity_submission_status(activity_id):
 
     class_doc = database.db.classes.find_one({"_id": ObjectId(activity.get("class_id"))}) if ObjectId.is_valid(activity.get("class_id", "")) else None
     theme = database.db.temas.find_one({"_id": ObjectId(activity.get("theme_id"))}) if ObjectId.is_valid(activity.get("theme_id", "")) else None
-    expected_student_ids = sorted(class_doc.get("student_ids", [])) if class_doc else []
+    expected_student_ids = sorted(str(student_id) for student_id in class_doc.get("student_ids", [])) if class_doc else []
     users = {
         str(item["_id"]): item.get("display_name", item.get("email", "Aluno"))
         for item in database.db.users.find({"_id": {"$in": [ObjectId(value) for value in expected_student_ids if ObjectId.is_valid(value)]}})
@@ -170,6 +170,8 @@ def build_activity_submission_status(activity_id):
     today = datetime.now(timezone.utc).date().isoformat()
     late_students = missing_students if due_date and due_date < today else []
 
+    expected_students = [users.get(student_id, student_id) for student_id in expected_student_ids]
+
     return {
         "activity": {
             "_id": str(activity["_id"]),
@@ -181,7 +183,7 @@ def build_activity_submission_status(activity_id):
             "theme": theme.get("tema") if theme else "Tema não encontrado",
             "due_date": due_date,
         },
-        "expected_students": [users.get(student_id, student_id) for student_id in expected_student_ids],
+        "expected_students": expected_students,
         "submitted_students": submitted_students,
         "missing_students": missing_students,
         "late_students": late_students,
@@ -846,12 +848,12 @@ def delete_activity(id):
 @app.get("/activities/<id>/submissions")
 @require_role("professor")
 def get_activity_submissions(id):
+    if not ObjectId.is_valid(id):
+        return jsonify({"error": "ID inválido"}), 400
+
     teacher = current_user_id()
     if not activity_belongs_to_teacher(id, teacher):
         return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
-
-    if not ObjectId.is_valid(id):
-        return jsonify({"error": "ID inválido"}), 400
 
     status = build_activity_submission_status(id)
     if not status:
