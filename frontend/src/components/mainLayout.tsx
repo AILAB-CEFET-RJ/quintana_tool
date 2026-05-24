@@ -26,7 +26,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const router = useRouter()
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        localStorage.removeItem('authData')
         setAuthData({
             isLoggedIn: false,
             userId: '',
@@ -35,7 +36,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             token: '',
         })
 
-        router.push('/quintana/login')
+        await router.push('/quintana/login')
     }
 
     const userItems = isLoggedIn
@@ -47,7 +48,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             },
             {
                 key: 'logout',
-                label: <span onClick={handleLogout}>Sair</span>,
+                label: 'Sair',
                 icon: <LogoutOutlined />,
             },
         ]
@@ -102,7 +103,14 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     </nav>
 
                     <Dropdown
-                        menu={{ items: userItems }}
+                        menu={{
+                            items: userItems,
+                            onClick: ({ key }) => {
+                                if (key === 'logout') {
+                                    handleLogout()
+                                }
+                            }
+                        }}
                         onOpenChange={setIsMenuOpen}
                         overlayStyle={{ marginTop: 8 }}
                     >
