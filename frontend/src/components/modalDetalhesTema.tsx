@@ -1,5 +1,5 @@
 import { Modal, Input, Button, message } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tema } from '@/pages/quintana/home';
 import { useAuth } from '@/context';
 import { API_URL } from "@/config/config";
@@ -18,17 +18,24 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
     const { tipoUsuario, userId } = useAuth();
     const canEdit = tipoUsuario === 'professor' && tema?.teacher_id === userId;
 
+    useEffect(() => {
+        if (tema && open) {
+            setTemaEditado(tema.tema || '');
+            setDescricaoEditada(tema.descricao || '');
+        }
+    }, [tema, open]);
+
     const handleEditarTema = async () => {
         try {
-            if (tema && (descricaoEditada !== '' || temaEditado !== '')) {
+            if (tema) {
                 const response = await authFetch(`${API_URL}/temas/${tema._id}`, {
                     method: 'PUT',
                     headers: authHeaders({
                         'Content-Type': 'application/json'
                     }),
                     body: JSON.stringify({
-                        tema: temaEditado !== '' ? temaEditado : tema.tema,
-                        descricao: descricaoEditada !== '' ? descricaoEditada : tema.descricao
+                        tema: temaEditado,
+                        descricao: descricaoEditada
                     })
                 });
                 if (response.ok) {
@@ -36,9 +43,11 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
                     onCancel();
                     onTemaEditado({
                         ...tema,
-                        tema: temaEditado !== '' ? temaEditado : tema.tema,
-                        descricao: descricaoEditada !== '' ? descricaoEditada : tema.descricao
+                        tema: temaEditado,
+                        descricao: descricaoEditada
                     });
+                } else {
+                    message.error('Erro ao atualizar o tema. Por favor, tente novamente.');
                 }
             }
         } catch (error) {
@@ -69,10 +78,10 @@ const ModalDetalhesTema: React.FC<TemaDetalhes> = ({ open, onCancel, tema, onTem
                     <label style={{ marginBottom: '10px' }}><b>Professor</b>:</label>
                     <Input style={{ marginBottom: '10px' }} value={tema.teacher_name || 'Professor'} disabled />
                     <label style={{ marginBottom: '10px' }}><b>Tema</b>:</label>
-                    <Input style={{ marginBottom: '10px' }} defaultValue={tema.tema} onChange={(e) => setTemaEditado(e.target.value)} />
+                    <Input style={{ marginBottom: '10px' }} value={temaEditado} onChange={(e) => setTemaEditado(e.target.value)} />
                     <label style={{ marginBottom: '10px' }}><b>Descrição</b>:</label>
-                    <Input.TextArea style={{ marginBottom: '10px' }} defaultValue={tema.descricao} onChange={(e) => setDescricaoEditada(e.target.value)} />
-                    <Button onClick={handleEditarTema}>Editar</Button>
+                    <Input.TextArea style={{ marginBottom: '10px' }} value={descricaoEditada} onChange={(e) => setDescricaoEditada(e.target.value)} />
+                    <Button type="primary" onClick={handleEditarTema}>Salvar alterações</Button>
                 </div>
             )}
         </Modal>

@@ -971,7 +971,7 @@ def update_tema(id):
             if result.modified_count == 1:
                 return jsonify({"message": "Tema atualizado com sucesso!"}), 200
             else:
-                return jsonify({"message": "Nada foi atualizado."}), 304
+                return jsonify({"message": "Nada foi atualizado."}), 200
         else:
             return jsonify({"error": "Tema não encontrado"}), 404
     except Exception as e:

@@ -1,6 +1,6 @@
 import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic, Spin, Alert } from 'antd';
 import { useState, useEffect } from 'react';
-import { PlusOutlined, DeleteOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useAuth } from '../../context';
 import CustomTable from '../../components/customTable';
@@ -393,9 +393,14 @@ const Home = () => {
             key: 'acoes',
             render: (record: Tema) => (
                 tipoUsuario === 'professor' && record.teacher_id === userId ? (
-                    <Tooltip title="Deletar tema">
-                        <Button onClick={() => handleDeleteTema(record._id)} danger icon={<DeleteOutlined />} />
-                    </Tooltip>
+                    <Space>
+                        <Tooltip title="Editar tema">
+                            <Button onClick={() => openModal(record)} icon={<EditOutlined />} />
+                        </Tooltip>
+                        <Tooltip title="Deletar tema">
+                            <Button onClick={() => handleDeleteTema(record._id)} danger icon={<DeleteOutlined />} />
+                        </Tooltip>
+                    </Space>
                 ) :
                     tipoUsuario === 'aluno' && (
                         <Link href={`/quintana/redacao?id=${record._id}`}
