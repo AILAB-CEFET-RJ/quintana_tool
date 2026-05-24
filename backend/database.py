@@ -39,6 +39,8 @@ REDACAO_LIST_PROJECTION = {
     "class_id": 1,
     "activity_id": 1,
     "correction_source": 1,
+    "ai_evaluation": 1,
+    "teacher_review": 1,
     "is_latest_version": 1,
 }
 
@@ -324,24 +326,68 @@ def get_redacao_versions(id):
 
     return sorted(redacoes, key=lambda item: (item.get("version_number", 1), item.get("created_at", "")))
 
-def update_redacao(id, data):
+def to_score(value):
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        score = 0
+    return max(0, min(score, 200))
+
+def update_redacao(id, data, reviewer_id=None, reviewer_name=None):
     redacoes_collection = db.redacoes
     object_id = ObjectId(id)
-        
+    redacao = redacoes_collection.find_one({"_id": object_id})
+    if not redacao:
+        return None
+
+    review_action = data.get("review_action", "adjust")
+    reviewed_at = data.get("reviewed_at")
+
+    if review_action == "accept_ai":
+        scores = [
+            to_score(redacao.get("nota_competencia_1_model")),
+            to_score(redacao.get("nota_competencia_2_model")),
+            to_score(redacao.get("nota_competencia_3_model")),
+            to_score(redacao.get("nota_competencia_4_model")),
+            to_score(redacao.get("nota_competencia_5_model")),
+        ]
+        review_status = "accepted"
+    else:
+        scores = [
+            to_score(data.get("nota_competencia_1_professor")),
+            to_score(data.get("nota_competencia_2_professor")),
+            to_score(data.get("nota_competencia_3_professor")),
+            to_score(data.get("nota_competencia_4_professor")),
+            to_score(data.get("nota_competencia_5_professor")),
+        ]
+        review_status = "adjusted"
+
+    feedback_professor = data.get("feedback_professor", "")
+    review_comment = data.get("review_comment", "")
+    nota_professor = sum(scores)
+
+    update_payload = {
+        "nota_competencia_1_professor": scores[0],
+        "nota_competencia_2_professor": scores[1],
+        "nota_competencia_3_professor": scores[2],
+        "nota_competencia_4_professor": scores[3],
+        "nota_competencia_5_professor": scores[4],
+        "feedback_professor": feedback_professor,
+        "nota_professor": nota_professor,
+        "updated_at": reviewed_at,
+        "teacher_review": {
+            "status": review_status,
+            "source": "professor",
+            "reviewed_by": str(reviewer_id) if reviewer_id else None,
+            "reviewed_by_name": reviewer_name,
+            "reviewed_at": reviewed_at,
+            "comment": review_comment,
+        },
+    }
 
     result = redacoes_collection.update_one(
         {"_id": object_id},
-        {"$set": {
-            "nota_competencia_1_professor": data.get("nota_competencia_1_professor"),
-            "nota_competencia_2_professor": data.get("nota_competencia_2_professor"),
-            "nota_competencia_3_professor": data.get("nota_competencia_3_professor"),
-            "nota_competencia_4_professor": data.get("nota_competencia_4_professor"),
-            "nota_competencia_5_professor": data.get("nota_competencia_5_professor"),
-            "feedback_professor": data.get("feedback_professor"),
-            "nota_professor": float(data.get("nota_competencia_1_professor")) + float(data.get(
-                "nota_competencia_2_professor")) + float(data.get("nota_competencia_3_professor")) + float(data.get(
-                "nota_competencia_4_professor")) + float(data.get("nota_competencia_5_professor")),
-        }}
+        {"$set": update_payload}
     )
 
     return result

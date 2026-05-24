@@ -22,6 +22,15 @@ def get_model_config(name):
         raise ValueError(f"Modelo '{name}' não encontrado. Disponíveis: {[m['name'] for m in models]}")
     return model
 
+def get_active_model_info():
+    model_config = get_model_config(config['model'])
+    return {
+        "name": model_config.get("name", config["model"]),
+        "version": model_config.get("version", model_config.get("name", config["model"])),
+        "type": model_config.get("type", "pkl"),
+        "path": model_config.get("path"),
+    }
+
 def get_computervision_client():
     subscription_key = os.getenv('SUBSCRIPTION_KEY')
     endpoint = os.getenv('ENDPOINT')

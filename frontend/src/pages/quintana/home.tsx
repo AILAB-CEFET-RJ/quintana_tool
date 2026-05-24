@@ -121,6 +121,21 @@ export interface Redacao {
     activity_id?: string | null;
     submitted_at?: string;
     correction_source?: string;
+    ai_evaluation?: {
+        source?: string;
+        model_name?: string;
+        model_version?: string;
+        model_type?: string;
+        created_at?: string;
+    };
+    teacher_review?: {
+        status?: string;
+        source?: string;
+        reviewed_by?: string | null;
+        reviewed_by_name?: string | null;
+        reviewed_at?: string | null;
+        comment?: string;
+    };
     is_latest_version?: boolean;
 }
 

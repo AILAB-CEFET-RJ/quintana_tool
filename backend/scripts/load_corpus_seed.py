@@ -475,6 +475,21 @@ class CorpusLoader:
             "class_id": str(turma_info["id"]),
             "activity_id": str(atividade["id"]),
             "correction_source": "model",
+            "ai_evaluation": {
+                "source": "ia",
+                "model_name": "corpus_humano_sintetico",
+                "model_version": "seed_corpus_v1",
+                "model_type": "seed",
+                "created_at": submitted_at,
+            },
+            "teacher_review": {
+                "status": "pending",
+                "source": "professor",
+                "reviewed_by": None,
+                "reviewed_by_name": None,
+                "reviewed_at": None,
+                "comment": "",
+            },
             "is_latest_version": is_latest_version,
             "schema_version": 1,
             "seed_batch": self.seed_batch

@@ -56,6 +56,23 @@ class StructuredFeedback(TypedDict, total=False):
     rewrite_checklist: List[RewriteChecklistItem]
 
 
+class AiEvaluation(TypedDict, total=False):
+    source: str
+    model_name: str
+    model_version: str
+    model_type: str
+    created_at: str
+
+
+class TeacherReview(TypedDict, total=False):
+    status: str
+    source: str
+    reviewed_by: Optional[str]
+    reviewed_by_name: Optional[str]
+    reviewed_at: Optional[str]
+    comment: str
+
+
 class RedacaoDocument(TypedDict, total=False):
     _id: str
     titulo: str
@@ -90,6 +107,8 @@ class RedacaoDocument(TypedDict, total=False):
     class_id: Optional[str]
     activity_id: Optional[str]
     correction_source: str
+    ai_evaluation: AiEvaluation
+    teacher_review: TeacherReview
     is_latest_version: bool
     schema_version: int
 
@@ -180,6 +199,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "class_id",
             "activity_id",
             "correction_source",
+            "ai_evaluation",
+            "teacher_review",
             "is_latest_version",
             "schema_version",
             "student_name",

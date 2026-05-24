@@ -1,7 +1,7 @@
 import database
 from flask import Flask, g, request, jsonify
 from bson import ObjectId
-from functions import evaluate_redacao, persist_essay, get_text
+from functions import evaluate_redacao, persist_essay, get_text, get_active_model_info
 from llm import get_llm_feedback, get_structured_llm_feedback
 from pedagogy import build_structured_feedback, build_textual_feedback_from_structured
 from analytics import build_teacher_analytics
@@ -59,6 +59,17 @@ def build_ordered_grade_payload(scores):
             }
             for index, code in enumerate(COMPETENCY_CODES)
         ]
+    }
+
+
+def build_ai_evaluation_metadata(created_at):
+    model_info = get_active_model_info()
+    return {
+        "source": "ia",
+        "model_name": model_info.get("name"),
+        "model_version": model_info.get("version"),
+        "model_type": model_info.get("type"),
+        "created_at": created_at,
     }
 
 
@@ -391,6 +402,15 @@ def post_model_response():
         "activity_id": activity_id,
         "submitted_at": now,
         "correction_source": "model",
+        "ai_evaluation": build_ai_evaluation_metadata(now),
+        "teacher_review": {
+            "status": "pending",
+            "source": "professor",
+            "reviewed_by": None,
+            "reviewed_by_name": None,
+            "reviewed_at": None,
+            "comment": ""
+        },
         "is_latest_version": True
     }
     essay_data["schema_version"] = 1
@@ -510,6 +530,15 @@ def post_model_response_witht_ocr():
         "activity_id": activity_id,
         "submitted_at": now,
         "correction_source": "model",
+        "ai_evaluation": build_ai_evaluation_metadata(now),
+        "teacher_review": {
+            "status": "pending",
+            "source": "professor",
+            "reviewed_by": None,
+            "reviewed_by_name": None,
+            "reviewed_at": None,
+            "comment": ""
+        },
         "is_latest_version": True
     }
     essay_data["schema_version"] = 1
@@ -1051,17 +1080,22 @@ def update_redacao(id):
         if response:
             return response
         data = request.json
+        data["reviewed_at"] = datetime.now(timezone.utc).isoformat()
         redacao_before = database.get_redacao_document(id)
-        result = database.update_redacao(id, data)
+        result = database.update_redacao(id, data, current_user_id(), current_display_name())
         invalidate_analytics_for_redacao(redacao_before)
 
+        if result is None:
+            return jsonify({"error": "Redação não encontrada"}), 404
+
         if result.matched_count == 1:
-            if result.modified_count == 1:
-                return jsonify({"message": "Redacao atualizado com sucesso!"}), 200
-            else:
-                return jsonify({"message": "Nada foi atualizado."}), 304
+            updated = database.get_redacao_document(id)
+            return jsonify({
+                "message": "Redação revisada com sucesso!",
+                "redacao": database.serialize_redacao(updated)
+            }), 200
         else:
-            return jsonify({"error": "Tema não encontrado"}), 404
+            return jsonify({"error": "Redação não encontrada"}), 404
     except Exception as e:
         return error_response("Erro ao atualizar redação", 500, e)
 

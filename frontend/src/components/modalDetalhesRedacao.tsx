@@ -1,4 +1,4 @@
-import { Modal, Input, Button, message, Collapse, Row, Col, Card, Statistic, Tabs } from 'antd';
+import { Modal, Input, Button, message, Collapse, Row, Col, Card, Statistic, Tabs, Alert, Space, Tag } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { Redacao, Tema } from '@/pages/quintana/home';
@@ -30,6 +30,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
     const [notaComp4Editada, setnotaComp4Editada] = useState<string>('');
     const [notaComp5Editada, setnotaComp5Editada] = useState<string>('');
     const [feedbackProfessorEditada, setFeedbackProfessorEditada] = useState<string>('');
+    const [reviewComment, setReviewComment] = useState<string>('');
     const [versions, setVersions] = useState<Redacao[]>([]);
     const { tipoUsuario } = useAuth();
 
@@ -41,6 +42,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
         setnotaComp4Editada(`${redacao?.nota_competencia_4_professor ?? ''}`)
         setnotaComp5Editada(`${redacao?.nota_competencia_5_professor ?? ''}`)
         setFeedbackProfessorEditada(redacao?.feedback_professor ?? '')
+        setReviewComment(redacao?.teacher_review?.comment ?? '')
     }, [redacao])
 
     useEffect(() => {
@@ -67,42 +69,45 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
 
     const { Panel } = Collapse;
 
-    const handleEditarRedacao = async () => {
+    const reviewStatusLabel: Record<string, string> = {
+        pending: 'Pendente',
+        accepted: 'Nota IA aceita',
+        adjusted: 'Ajustada pelo professor',
+    }
+
+    const formatDateTime = (value?: string | null) => {
+        if (!value) return '-'
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return value
+        return date.toLocaleString('pt-BR')
+    }
+
+    const handleEditarRedacao = async (reviewAction: 'accept_ai' | 'adjust' = 'adjust') => {
         try {
-            const gradesEdited = notaComp1Editada !== '' ||
-                notaComp2Editada !== '' ||
-                notaComp3Editada !== '' ||
-                notaComp4Editada !== '' ||
-                notaComp5Editada !== '' ||
-                feedbackProfessorEditada !== ''
-
-
-            if (redacao && redacao.nota_professor && gradesEdited) {
-                message.error('Redação já foi corrigida!');
-                return
-            }
-            if (redacao && gradesEdited) {
+            if (redacao) {
                 const response = await authFetch(`${API_URL}/redacoes/${redacao._id}`, {
                     method: 'PUT',
                     headers: authHeaders({
                         'Content-Type': 'application/json'
                     }),
                     body: JSON.stringify({
+                        review_action: reviewAction,
                         nota_competencia_1_professor: notaComp1Editada !== '' ? notaComp1Editada : 0,
                         nota_competencia_2_professor: notaComp2Editada !== '' ? notaComp2Editada : 0,
                         nota_competencia_3_professor: notaComp3Editada !== '' ? notaComp3Editada : 0,
                         nota_competencia_4_professor: notaComp4Editada !== '' ? notaComp4Editada : 0,
                         nota_competencia_5_professor: notaComp5Editada !== '' ? notaComp5Editada : 0,
                         feedback_professor: feedbackProfessorEditada !== '' ? feedbackProfessorEditada : "",
-                        //nome_professor: redacao.tema.nome_professor todo: add nome professor
+                        review_comment: reviewComment,
                     })
                 });
                 if (response.ok) {
-                    message.success('Redacao atualizado com sucesso!');
+                    const data = await response.json()
+                    message.success(reviewAction === 'accept_ai' ? 'Notas IA aceitas pelo professor.' : 'Revisão do professor salva.');
                     onCancel();
-                    onRedacaoEditado({
-                        ...redacao,
-                    });
+                    onRedacaoEditado(data.redacao || redacao);
+                } else {
+                    message.error('Erro ao salvar a revisão da redação.')
                 }
             }
         } catch (error) {
@@ -158,6 +163,9 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                                 <strong>{redacao.titulo?.trim() || 'Sem título'}</strong>
                                 <p style={{ margin: '6px 0 0', color: '#6b7280' }}>
                                     {redacao.student_name || 'Aluno'} · Versão {redacao.version_number || 1}
+                                </p>
+                                <p style={{ margin: '6px 0 0', color: '#6b7280' }}>
+                                    Avaliação IA: {redacao.ai_evaluation?.model_version || redacao.ai_evaluation?.model_name || 'modelo registrado'} · {formatDateTime(redacao.ai_evaluation?.created_at)}
                                 </p>
                             </Card>
                         </Col>
@@ -262,6 +270,25 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                 <div>
                     <label style={labelStyle}><b>Título</b>:</label>
                     <Input style={inputStyle} value={redacao.titulo} disabled />
+                    <Alert
+                        style={{ marginBottom: 12 }}
+                        type="info"
+                        showIcon
+                        message={
+                            <Space wrap>
+                                <span>Avaliação IA:</span>
+                                <Tag color="blue">{redacao.ai_evaluation?.model_version || redacao.ai_evaluation?.model_name || 'modelo registrado'}</Tag>
+                                <span>{formatDateTime(redacao.ai_evaluation?.created_at)}</span>
+                                <span>Revisão:</span>
+                                <Tag color={redacao.teacher_review?.status === 'pending' ? 'gold' : 'green'}>
+                                    {reviewStatusLabel[redacao.teacher_review?.status || 'pending'] || redacao.teacher_review?.status}
+                                </Tag>
+                            </Space>
+                        }
+                        description={redacao.teacher_review?.reviewed_at
+                            ? `Revisado por ${redacao.teacher_review.reviewed_by_name || 'professor'} em ${formatDateTime(redacao.teacher_review.reviewed_at)}.`
+                            : 'O professor pode aceitar a avaliação automática da IA ou registrar uma revisão própria.'}
+                    />
                     <label style={labelStyle}><b>Texto</b>:</label>
                     <TextArea rows={20} style={inputStyle} value={redacao.texto}
                         disabled />
@@ -285,6 +312,15 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                         </Panel>
                         <Panel header="Feedback professor" key="2">
                             <TextArea rows={20} style={inputStyle} value={feedbackProfessorEditada} onChange={(e) => setFeedbackProfessorEditada(e.target.value)} />
+                        </Panel>
+                        <Panel header="Comentário da revisão" key="review">
+                            <TextArea
+                                rows={5}
+                                style={inputStyle}
+                                value={reviewComment}
+                                placeholder="Registre uma justificativa curta para aceitar ou ajustar a avaliação da IA."
+                                onChange={(e) => setReviewComment(e.target.value)}
+                            />
                         </Panel>
                         <Panel header="Notas IA por competência" key="3">
                             <label style={labelStyle}><b>Nota IA C1 - Domínio da modalidade escrita formal </b></label>
@@ -319,7 +355,10 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                         </Panel>
                     </Collapse>
 
-                    <Button style={{ marginTop: '1vw' }} onClick={handleEditarRedacao}>Editar</Button>
+                    <Space style={{ marginTop: '1vw' }}>
+                        <Button onClick={() => handleEditarRedacao('accept_ai')}>Aceitar notas IA</Button>
+                        <Button type="primary" onClick={() => handleEditarRedacao('adjust')}>Salvar revisão</Button>
+                    </Space>
                 </div>
             )}
         </Modal>
