@@ -14,6 +14,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../context'
+import { IS_WORKSHOP_MODE } from '@/config/config'
 
 const { Header, Content } = Layout
 
@@ -123,6 +124,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     </Dropdown>
                 </div>
             </Header>
+            {IS_WORKSHOP_MODE && (
+                <div style={styles.workshopBanner}>
+                    <strong>Modo oficina ativo</strong>
+                    <span>Dados e fluxos preparados para demonstração pedagógica. Remoções destrutivas ficam bloqueadas.</span>
+                </div>
+            )}
             <Content>{children}</Content>
         </Layout>
     )
@@ -199,6 +206,18 @@ const styles: Record<string, CSSProperties> = {
         borderColor: 'rgba(255, 255, 255, 0.18)',
         color: '#ffffff',
         background: 'rgba(255, 255, 255, 0.08)'
+    },
+    workshopBanner: {
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        padding: '8px 16px',
+        background: '#fff7e6',
+        borderBottom: '1px solid #ffd591',
+        color: '#7c4a03',
+        fontSize: 13
     }
 }
 

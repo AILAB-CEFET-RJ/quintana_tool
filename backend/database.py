@@ -40,6 +40,7 @@ REDACAO_LIST_PROJECTION = {
     "activity_id": 1,
     "correction_source": 1,
     "ai_evaluation": 1,
+    "ai_quality": 1,
     "teacher_review": 1,
     "is_latest_version": 1,
 }

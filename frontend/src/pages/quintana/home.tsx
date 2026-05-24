@@ -1,12 +1,12 @@
-import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic, Spin, Alert } from 'antd';
+import { Tabs, Button, Tooltip, message, Select, Space, Card, Row, Col, Statistic, Spin, Alert, Tag } from 'antd';
 import { useState, useEffect } from 'react';
-import { PlusOutlined, DeleteOutlined, EditOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, FileTextOutlined, ReadOutlined, TrophyOutlined, UserOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useAuth } from '../../context';
 import CustomTable from '../../components/customTable';
 import ModalDetalhesTema from '@/components/modalDetalhesTema';
 import ModalDetalhesRedacao from "@/components/modalDetalhesRedacao";
-import { API_URL } from "@/config/config";
+import { API_URL, IS_WORKSHOP_MODE } from "@/config/config";
 import ProgressTimeline from '@/components/studentInsights/ProgressTimeline';
 import CompetencyRadar from '@/components/studentInsights/CompetencyRadar';
 import PageShell from '@/components/ui/PageShell';
@@ -128,6 +128,16 @@ export interface Redacao {
         model_type?: string;
         created_at?: string;
     };
+    ai_quality?: {
+        status?: string;
+        requires_review?: boolean;
+        checked_at?: string;
+        flags?: Array<{
+            code?: string;
+            message?: string;
+            severity?: string;
+        }>;
+    };
     teacher_review?: {
         status?: string;
         source?: string;
@@ -161,6 +171,7 @@ const Home = () => {
     const [studentActivities, setStudentActivities] = useState<any[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('todos');
     const [selectedActivityId, setSelectedActivityId] = useState<string>('todos');
+    const [selectedReportStudentId, setSelectedReportStudentId] = useState<string>('todos');
     const [analyticsGroupBy, setAnalyticsGroupBy] = useState<string>('activity');
     const { isLoggedIn, userId, tipoUsuario, nomeUsuario, token } = useAuth();
 
@@ -344,6 +355,10 @@ const Home = () => {
     }, [tipoUsuario, userId, activeKey]);
 
     const handleDeleteTema = async (id: string) => {
+        if (IS_WORKSHOP_MODE) {
+            message.warning('Remoção de temas bloqueada no modo oficina.');
+            return;
+        }
         try {
             const response = await authFetch(`${API_URL}/temas/${id}`, {
                 method: 'DELETE'
@@ -365,6 +380,80 @@ const Home = () => {
 
     const handleRedacaoEditado = (redacaoEditado: Redacao) => {
         setRedacoesData(redacoesData.map(redacao => (redacao._id === redacaoEditado._id ? redacaoEditado : redacao)));
+    };
+
+    const renderAiQualityTag = (redacao: Redacao) => {
+        const status = redacao.ai_quality?.status || 'ok';
+        if (status === 'requires_review') {
+            return (
+                <Tooltip title={(redacao.ai_quality?.flags || []).map((flag) => flag.message).join(' ') || 'Avaliação automática requer revisão.'}>
+                    <Tag color="red">Requer revisão</Tag>
+                </Tooltip>
+            );
+        }
+        if (status === 'review_recommended') {
+            return (
+                <Tooltip title={(redacao.ai_quality?.flags || []).map((flag) => flag.message).join(' ') || 'Revisão humana recomendada.'}>
+                    <Tag color="gold">Revisão sugerida</Tag>
+                </Tooltip>
+            );
+        }
+        return <Tag color="green">OK</Tag>;
+    };
+
+    const downloadPdfReport = async (url: string, filename: string) => {
+        try {
+            const response = await authFetch(url);
+            if (!response.ok) {
+                message.error('Erro ao gerar relatório.');
+                return;
+            }
+
+            const blob = await response.blob();
+            const objectUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(objectUrl);
+        } catch (error) {
+            console.error('Erro ao baixar relatório:', error);
+            message.error('Erro ao baixar relatório.');
+        }
+    };
+
+    const buildReportParams = () => {
+        const params = new URLSearchParams();
+        if (selectedClassId !== 'todos') {
+            params.append('class_id', selectedClassId);
+        }
+        if (selectedActivityId !== 'todos') {
+            params.append('activity_id', selectedActivityId);
+        }
+        params.append('group_by', analyticsGroupBy);
+        return params.toString();
+    };
+
+    const downloadClassReport = () => {
+        const params = buildReportParams();
+        downloadPdfReport(
+            `${API_URL}/professores/${userId}/reports/class.pdf?${params}`,
+            'relatorio-turma-quintana.pdf'
+        );
+    };
+
+    const downloadStudentReport = () => {
+        if (selectedReportStudentId === 'todos') {
+            message.warning('Selecione um aluno para gerar o relatório.');
+            return;
+        }
+        const params = buildReportParams();
+        downloadPdfReport(
+            `${API_URL}/professores/${userId}/reports/students/${selectedReportStudentId}.pdf?${params}`,
+            'relatorio-aluno-quintana.pdf'
+        );
     };
 
     const getTemaNome = (id_tema: string): string => {
@@ -412,9 +501,11 @@ const Home = () => {
                         <Tooltip title="Editar tema">
                             <Button onClick={() => openModal(record)} icon={<EditOutlined />} />
                         </Tooltip>
-                        <Tooltip title="Deletar tema">
-                            <Button onClick={() => handleDeleteTema(record._id)} danger icon={<DeleteOutlined />} />
-                        </Tooltip>
+                        {!IS_WORKSHOP_MODE && (
+                            <Tooltip title="Deletar tema">
+                                <Button onClick={() => handleDeleteTema(record._id)} danger icon={<DeleteOutlined />} />
+                            </Tooltip>
+                        )}
                     </Space>
                 ) :
                     tipoUsuario === 'aluno' && (
@@ -481,6 +572,14 @@ const Home = () => {
             key: 'nota_total',
             align: 'center' as const,
             sorter: (a: Redacao, b: Redacao) => compareNumber(a.nota_total, b.nota_total),
+            ellipsis: true,
+        },
+        {
+            title: 'Validação IA',
+            key: 'ai_quality',
+            align: 'center' as const,
+            render: (_: any, record: Redacao) => renderAiQualityTag(record),
+            sorter: (a: Redacao, b: Redacao) => compareText(a.ai_quality?.status, b.ai_quality?.status),
             ellipsis: true,
         },
         {
@@ -651,6 +750,7 @@ const Home = () => {
                                 onChange={(value) => {
                                     setSelectedClassId(value);
                                     setSelectedActivityId('todos');
+                                    setSelectedReportStudentId('todos');
                                 }}
                             >
                                 <Option value="todos">Todas as turmas</Option>
@@ -679,6 +779,33 @@ const Home = () => {
                                 <Option value="theme">Agrupar por tema</Option>
                                 <Option value="week">Agrupar por dia</Option>
                             </Select>
+                            <Button icon={<DownloadOutlined />} onClick={downloadClassReport}>
+                                Relatório da turma
+                            </Button>
+                            <Select
+                                value={selectedReportStudentId}
+                                style={{ minWidth: 240 }}
+                                showSearch
+                                optionFilterProp="label"
+                                onChange={setSelectedReportStudentId}
+                                filterOption={(input, option) =>
+                                    String(option?.label || '').toLowerCase().includes(input.toLowerCase())
+                                }
+                            >
+                                <Option value="todos" label="Selecionar aluno">Selecionar aluno</Option>
+                                {alunos.map((item) => (
+                                    <Option key={item._id} value={item._id} label={item.display_name || 'Aluno'}>
+                                        {item.display_name || 'Aluno'}
+                                    </Option>
+                                ))}
+                            </Select>
+                            <Button
+                                icon={<DownloadOutlined />}
+                                onClick={downloadStudentReport}
+                                disabled={selectedReportStudentId === 'todos'}
+                            >
+                                Relatório do aluno
+                            </Button>
                         </Space>
                         {analyticsLoading ? (
                             <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>

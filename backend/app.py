@@ -1,10 +1,12 @@
 import database
-from flask import Flask, g, request, jsonify
+from flask import Flask, g, request, jsonify, Response
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text, get_active_model_info
 from llm import get_llm_feedback, get_structured_llm_feedback
 from pedagogy import build_structured_feedback, build_textual_feedback_from_structured
 from analytics import build_teacher_analytics
+from reporting import build_class_report_pdf, build_student_report_pdf
+from ai_quality import validate_ai_evaluation
 from schemas import validate_required_fields
 from flask_cors import CORS
 from config import (
@@ -16,6 +18,7 @@ from config import (
     PASSWORD_RESET_RATE_LIMIT_IP_MAX,
     PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES,
     get_cors_origins,
+    is_workshop_mode,
     should_expose_errors,
 )
 from auth import create_token, decode_token, get_bearer_token, require_auth, require_role
@@ -71,6 +74,10 @@ def build_ai_evaluation_metadata(created_at):
         "model_type": model_info.get("type"),
         "created_at": created_at,
     }
+
+
+def build_ai_quality_metadata(text, scores, ai_evaluation, checked_at):
+    return validate_ai_evaluation(text, scores, ai_evaluation, checked_at)
 
 
 def current_user_id():
@@ -220,6 +227,13 @@ def error_response(message, status=500, exc=None):
     if exc is not None and should_expose_errors():
         payload["detail"] = str(exc)
     return jsonify(payload), status
+
+
+def workshop_delete_blocked_response(resource):
+    return jsonify({
+        "error": f"Remoção de {resource} bloqueada no modo oficina.",
+        "code": "workshop_delete_blocked"
+    }), 403
 
 
 def should_use_llm_feedback():
@@ -374,6 +388,15 @@ def post_model_response():
 
     feedback_structured = build_structured_feedback(grades)
     feedback_text_fallback = build_textual_feedback_from_structured(feedback_structured)
+    ai_evaluation = build_ai_evaluation_metadata(now)
+    model_scores = [
+        grades[competencias["comp1"]],
+        grades[competencias["comp2"]],
+        grades[competencias["comp3"]],
+        grades[competencias["comp4"]],
+        grades[competencias["comp5"]],
+    ]
+    ai_quality = build_ai_quality_metadata(rest_of_essay.strip(), model_scores, ai_evaluation, now)
 
     essay_data = {
         "titulo": title,
@@ -402,7 +425,8 @@ def post_model_response():
         "activity_id": activity_id,
         "submitted_at": now,
         "correction_source": "model",
-        "ai_evaluation": build_ai_evaluation_metadata(now),
+        "ai_evaluation": ai_evaluation,
+        "ai_quality": ai_quality,
         "teacher_review": {
             "status": "pending",
             "source": "professor",
@@ -464,6 +488,7 @@ def post_model_response():
             grades[competencias["comp4"]],
             grades[competencias["comp5"]],
         ]),
+        "ai_quality": ai_quality,
         "redacao_id": str(essay_id),
         "version_number": version_number
     })
@@ -496,6 +521,9 @@ def post_model_response_witht_ocr():
     feedback_structured = build_structured_feedback(grades)
     feedback_llm = build_textual_feedback_from_structured(feedback_structured)
     feedback_structured_source = "fallback"
+    ai_evaluation = build_ai_evaluation_metadata(now)
+    model_scores = [grades['nota1'], grades['nota2'], grades['nota3'], grades['nota4'], grades['nota5']]
+    ai_quality = build_ai_quality_metadata(essay, model_scores, ai_evaluation, now)
     if should_use_llm_feedback():
         try:
             feedback_llm = get_llm_feedback(essay, grades, theme)
@@ -530,7 +558,8 @@ def post_model_response_witht_ocr():
         "activity_id": activity_id,
         "submitted_at": now,
         "correction_source": "model",
-        "ai_evaluation": build_ai_evaluation_metadata(now),
+        "ai_evaluation": ai_evaluation,
+        "ai_quality": ai_quality,
         "teacher_review": {
             "status": "pending",
             "source": "professor",
@@ -557,7 +586,8 @@ def post_model_response_witht_ocr():
             obj.get("nota_3", 0),
             obj.get("nota_4", 0),
             obj.get("nota_5", 0),
-        ])
+        ]),
+        "ai_quality": ai_quality
     })
 
 
@@ -726,6 +756,75 @@ def get_professor_analytics(teacher_id):
     return jsonify(set_cached_analytics(current_teacher_id, class_id, activity_id, group_by, analytics))
 
 
+def pdf_response(content, filename):
+    return Response(
+        content,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@app.get("/professores/<teacher_id>/reports/class.pdf")
+@require_role("professor")
+def get_class_report(teacher_id):
+    current_teacher_id = current_user_id()
+    if teacher_id != current_teacher_id:
+        return jsonify({"error": "Acesso negado"}), 403
+
+    class_id = request.args.get("class_id")
+    activity_id = request.args.get("activity_id")
+    group_by = request.args.get("group_by", "activity")
+
+    class_doc = None
+    activity_doc = None
+    if class_id:
+        if not class_belongs_to_teacher(class_id, current_teacher_id):
+            return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+        class_doc = database.db.classes.find_one({"_id": ObjectId(class_id)})
+    if activity_id:
+        if not activity_belongs_to_teacher(activity_id, current_teacher_id):
+            return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+        activity_doc = database.db.activities.find_one({"_id": ObjectId(activity_id)})
+
+    analytics = build_teacher_analytics(current_teacher_id, class_id, activity_id, group_by)
+    content = build_class_report_pdf(
+        current_display_name(),
+        analytics,
+        class_doc.get("name") if class_doc else None,
+        activity_doc.get("title") if activity_doc else None,
+    )
+    return pdf_response(content, "relatorio-turma-quintana.pdf")
+
+
+@app.get("/professores/<teacher_id>/reports/students/<student_id>.pdf")
+@require_role("professor")
+def get_student_report(teacher_id, student_id):
+    current_teacher_id = current_user_id()
+    if teacher_id != current_teacher_id:
+        return jsonify({"error": "Acesso negado"}), 403
+    if not ObjectId.is_valid(student_id):
+        return jsonify({"error": "Aluno inválido"}), 400
+
+    class_id = request.args.get("class_id")
+    activity_id = request.args.get("activity_id")
+    if class_id and not class_belongs_to_teacher(class_id, current_teacher_id):
+        return jsonify({"error": "Turma não pertence ao professor informado"}), 403
+    if activity_id and not activity_belongs_to_teacher(activity_id, current_teacher_id):
+        return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
+
+    query = database.teacher_redacoes_query(current_teacher_id)
+    filters = [query, {"student_id": student_id}]
+    if class_id:
+        filters.append({"class_id": class_id})
+    if activity_id:
+        filters.append({"activity_id": activity_id})
+
+    redacoes = list(database.db.redacoes.find({"$and": filters}).sort([("created_at", 1), ("_id", 1)]))
+    student = database.db.users.find_one({"_id": ObjectId(student_id)}, {"display_name": 1, "tipoUsuario": 1})
+    content = build_student_report_pdf(current_display_name(), student, redacoes)
+    return pdf_response(content, "relatorio-aluno-quintana.pdf")
+
+
 @app.get("/classes")
 @require_role("professor")
 def get_classes():
@@ -781,6 +880,8 @@ def update_class(id):
 @require_role("professor")
 def delete_class(id):
     try:
+        if is_workshop_mode():
+            return workshop_delete_blocked_response("turmas")
         teacher = current_user_id()
         if not class_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Turma não pertence ao professor informado"}), 403
@@ -862,6 +963,8 @@ def update_activity(id):
 @require_role("professor")
 def delete_activity(id):
     try:
+        if is_workshop_mode():
+            return workshop_delete_blocked_response("atividades")
         teacher = current_user_id()
         if not activity_belongs_to_teacher(id, teacher):
             return jsonify({"error": "Atividade não pertence ao professor informado"}), 403
@@ -1011,6 +1114,8 @@ def update_tema(id):
 @require_role("professor")
 def delete_tema(id):
     try:
+        if is_workshop_mode():
+            return workshop_delete_blocked_response("temas")
         if not theme_belongs_to_teacher(id, current_user_id()):
             return jsonify({"error": "Tema não pertence ao professor informado"}), 403
         object_id = ObjectId(id)

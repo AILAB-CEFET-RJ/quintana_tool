@@ -46,6 +46,9 @@ Obs.: Certifique-se de que a porta do MongoDB está acessível e que o Docker es
 - [Esquema lógico do banco de dados](docs/esquema-banco.md)
 - [Segurança para oficinas](docs/seguranca-oficinas.md)
 - [Checklist operacional de oficina](docs/checklist-oficina.md)
+- [Roteiro de oficina](docs/roteiro-oficina.md)
+- [Controle de versões](docs/controle-versoes.md)
+- [Changelog](CHANGELOG.md)
 
 
 ## 📄 Licença

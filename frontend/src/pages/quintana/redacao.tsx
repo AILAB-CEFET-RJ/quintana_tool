@@ -303,6 +303,23 @@ const Redacao = () => {
 
         {submissionResult?.grades && (
           <div style={styles.resultPanel}>
+            {submissionResult.ai_quality?.status && submissionResult.ai_quality.status !== 'ok' && (
+              <Alert
+                style={{ marginBottom: 16 }}
+                type={submissionResult.ai_quality.requires_review ? 'warning' : 'info'}
+                showIcon
+                message={submissionResult.ai_quality.requires_review ? 'Avaliação IA requer revisão' : 'Revisão humana recomendada'}
+                description={
+                  <div>
+                    {(submissionResult.ai_quality.flags || []).map((flag: any, index: number) => (
+                      <p key={`${flag.code || 'flag'}-${index}`} style={{ margin: index === 0 ? 0 : '6px 0 0' }}>
+                        {flag.message}
+                      </p>
+                    ))}
+                  </div>
+                }
+              />
+            )}
             <p style={styles.submittedTitle}>
               <strong>Título:</strong> {essayTitle.trim() || 'Sem título'}
             </p>

@@ -85,8 +85,9 @@ Isso cria o arquivo `.env` a partir do `.env.example`. Em seguida, edite o `.env
 ### Variáveis disponíveis
 
 ```bash
-# Modo de operação: demo para oficinas com dados fictícios; production para uso real.
+# Modo de operação: demo para desenvolvimento, workshop para oficinas, production para uso real.
 APP_MODE=demo
+NEXT_PUBLIC_APP_MODE=demo
 FLASK_DEBUG=false
 
 # MongoDB
@@ -142,6 +143,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Substitua `troque-esta-chave` pelo valor gerado. Se `JWT_SECRET` for alterado, os tokens existentes deixam de valer e os usuários precisam fazer login novamente.
+
+**`NEXT_PUBLIC_APP_MODE`** deve acompanhar `APP_MODE` quando o frontend precisa refletir o modo de operação. Use `NEXT_PUBLIC_APP_MODE=workshop` para exibir banner e atalhos do modo oficina.
 
 **`ANALYTICS_CACHE_TTL_SECONDS`** controla por quantos segundos o backend reaproveita resultados dos painéis de análise do professor. Use `0` para desabilitar o cache.
 

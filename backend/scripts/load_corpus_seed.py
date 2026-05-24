@@ -29,6 +29,11 @@ except ImportError:
     HAS_PEDAGOGY = False
     print("⚠️  pedagogy.py não encontrado. Usando feedback estruturado básico.")
 
+try:
+    from ai_quality import validate_ai_evaluation
+except ImportError:
+    validate_ai_evaluation = None
+
 # Configurações
 SENHA_PADRAO = "123456"
 SENHA_HASH = bcrypt.hashpw(SENHA_PADRAO.encode('utf-8'), bcrypt.gensalt())  # bytes
@@ -441,6 +446,26 @@ class CorpusLoader:
         nota_c4 = notas_valores[3] if len(notas_valores) > 3 else 0
         nota_c5 = notas_valores[4] if len(notas_valores) > 4 else 0
         nota_total = sum(notas_valores) if notas_valores else 0
+        ai_evaluation = {
+            "source": "ia",
+            "model_name": "corpus_humano_sintetico",
+            "model_version": "seed_corpus_v1",
+            "model_type": "seed",
+            "created_at": submitted_at,
+        }
+        if validate_ai_evaluation:
+            ai_quality = validate_ai_evaluation(texto_original, notas_valores, ai_evaluation, submitted_at)
+        else:
+            ai_quality = {
+                "status": "review_recommended",
+                "requires_review": False,
+                "flags": [{
+                    "code": "seed_quality_unavailable",
+                    "message": "Validação de qualidade indisponível durante a carga sintética.",
+                    "severity": "low",
+                }],
+                "checked_at": submitted_at,
+            }
 
         redacao_data = {
             "titulo": titulo,
@@ -475,13 +500,8 @@ class CorpusLoader:
             "class_id": str(turma_info["id"]),
             "activity_id": str(atividade["id"]),
             "correction_source": "model",
-            "ai_evaluation": {
-                "source": "ia",
-                "model_name": "corpus_humano_sintetico",
-                "model_version": "seed_corpus_v1",
-                "model_type": "seed",
-                "created_at": submitted_at,
-            },
+            "ai_evaluation": ai_evaluation,
+            "ai_quality": ai_quality,
             "teacher_review": {
                 "status": "pending",
                 "source": "professor",
@@ -679,6 +699,11 @@ def main():
         action='store_true',
         help='Cria trajetórias controladas de progresso para alunos âncora usados em demonstrações'
     )
+    parser.add_argument(
+        '--workshop',
+        action='store_true',
+        help='Atalho para preparar uma base curada de oficina com trajetórias de progresso'
+    )
     
     args = parser.parse_args()
     
@@ -686,6 +711,11 @@ def main():
     print("🚀 CARGA DE DADOS PARA O QUINTANA (Respeitando schemas.py)")
     print("=" * 70)
     
+    if args.workshop:
+        args.demo_progress = True
+        if args.seed_batch == 'corpus_2026_01':
+            args.seed_batch = 'workshop_demo'
+
     loader = CorpusLoader(args.mongo_uri, args.seed_batch, args.db_name, demo_progress=args.demo_progress)
     loader.criar_indices()
 

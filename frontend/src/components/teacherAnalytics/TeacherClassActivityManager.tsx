@@ -3,7 +3,7 @@ import { BarChartOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@a
 import type { ColumnsType } from 'antd/es/table'
 import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { API_URL } from '@/config/config'
+import { API_URL, IS_WORKSHOP_MODE } from '@/config/config'
 import type { Tema } from '@/pages/quintana/home'
 import { authFetch, authHeaders } from '@/lib/authFetch'
 
@@ -105,6 +105,10 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const deleteClass = async (id: string) => {
+    if (IS_WORKSHOP_MODE) {
+      message.warning('Remoção de turmas bloqueada no modo oficina.')
+      return
+    }
     const response = await authFetch(`${API_URL}/classes/${id}`, { method: 'DELETE' })
     if (response.ok) {
       message.success('Turma removida.')
@@ -115,6 +119,10 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
   }
 
   const deleteActivity = async (id: string) => {
+    if (IS_WORKSHOP_MODE) {
+      message.warning('Remoção de atividades bloqueada no modo oficina.')
+      return
+    }
     const response = await authFetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
     if (response.ok) {
       message.success('Atividade removida.')
@@ -222,9 +230,11 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       render: (_, record) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => openEditClass(record)} />
-          <Popconfirm title="Remover turma?" onConfirm={() => deleteClass(record._id)}>
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {!IS_WORKSHOP_MODE && (
+            <Popconfirm title="Remover turma?" onConfirm={() => deleteClass(record._id)}>
+              <Button danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
         </Space>
       )
     }
@@ -265,9 +275,11 @@ const TeacherClassActivityManager: React.FC<TeacherClassActivityManagerProps> = 
       render: (_, record) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => openEditActivity(record)} />
-          <Popconfirm title="Remover atividade?" onConfirm={() => deleteActivity(record._id)}>
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {!IS_WORKSHOP_MODE && (
+            <Popconfirm title="Remover atividade?" onConfirm={() => deleteActivity(record._id)}>
+              <Button danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
         </Space>
       )
     }

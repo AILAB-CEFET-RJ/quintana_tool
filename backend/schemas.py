@@ -73,6 +73,19 @@ class TeacherReview(TypedDict, total=False):
     comment: str
 
 
+class AiQualityFlag(TypedDict, total=False):
+    code: str
+    message: str
+    severity: str
+
+
+class AiQuality(TypedDict, total=False):
+    status: str
+    requires_review: bool
+    flags: List[AiQualityFlag]
+    checked_at: str
+
+
 class RedacaoDocument(TypedDict, total=False):
     _id: str
     titulo: str
@@ -108,6 +121,7 @@ class RedacaoDocument(TypedDict, total=False):
     activity_id: Optional[str]
     correction_source: str
     ai_evaluation: AiEvaluation
+    ai_quality: AiQuality
     teacher_review: TeacherReview
     is_latest_version: bool
     schema_version: int
@@ -200,6 +214,7 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "activity_id",
             "correction_source",
             "ai_evaluation",
+            "ai_quality",
             "teacher_review",
             "is_latest_version",
             "schema_version",

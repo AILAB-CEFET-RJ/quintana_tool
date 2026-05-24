@@ -28,7 +28,7 @@ def get_cors_origins():
     if raw_origins:
         return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
-    if APP_MODE == "demo":
+    if APP_MODE in {"demo", "workshop"}:
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     return []
@@ -36,3 +36,7 @@ def get_cors_origins():
 
 def should_expose_errors():
     return APP_MODE == "demo" or os.getenv("FLASK_DEBUG", "false").lower() == "true"
+
+
+def is_workshop_mode():
+    return APP_MODE == "workshop"

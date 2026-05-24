@@ -5,6 +5,7 @@ import { LoginOutlined, UserAddOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/context'
+import { IS_WORKSHOP_MODE } from '@/config/config'
 
 const Index = () => {
   const { isLoggedIn } = useAuth()
@@ -36,6 +37,12 @@ const Index = () => {
             <Button size="large" icon={<UserAddOutlined />}>Criar conta</Button>
           </Link>
         </div>
+        {IS_WORKSHOP_MODE && (
+          <div style={styles.workshopBox}>
+            <strong>Modo oficina ativo</strong>
+            <span>Use os acessos rápidos na tela de login para demonstrar os perfis de aluno e professor.</span>
+          </div>
+        )}
       </section>
     </main>
   )
@@ -82,6 +89,17 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     flexWrap: 'wrap',
     marginTop: 28
+  },
+  workshopBox: {
+    display: 'grid',
+    gap: 4,
+    maxWidth: 520,
+    marginTop: 20,
+    padding: 14,
+    border: '1px solid rgba(255, 255, 255, 0.32)',
+    borderRadius: 8,
+    background: 'rgba(255, 255, 255, 0.13)',
+    color: '#ffffff'
   }
 }
 

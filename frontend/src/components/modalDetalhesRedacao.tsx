@@ -82,6 +82,36 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
         return date.toLocaleString('pt-BR')
     }
 
+    const renderAiQualityAlert = () => {
+        const quality = redacao?.ai_quality
+        if (!quality || quality.status === 'ok') return null
+
+        const flags = quality.flags || []
+        const isRequired = quality.status === 'requires_review' || quality.requires_review
+        return (
+            <Alert
+                style={{ marginBottom: 16 }}
+                type={isRequired ? 'warning' : 'info'}
+                showIcon
+                message={isRequired ? 'Avaliação IA requer revisão' : 'Revisão humana recomendada'}
+                description={
+                    <div>
+                        <p style={{ margin: '0 0 8px' }}>
+                            O sistema encontrou sinais de possível inconsistência na avaliação automática.
+                        </p>
+                        {flags.length > 0 && (
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                {flags.map((flag, index) => (
+                                    <li key={`${flag.code || 'flag'}-${index}`}>{flag.message}</li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                }
+            />
+        )
+    }
+
     const handleEditarRedacao = async (reviewAction: 'accept_ai' | 'adjust' = 'adjust') => {
         try {
             if (redacao) {
@@ -180,6 +210,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                             </Card>
                         </Col>
                     </Row>
+                    {renderAiQualityAlert()}
 
                     <Tabs
                         defaultActiveKey="resumo"
@@ -289,6 +320,7 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
                             ? `Revisado por ${redacao.teacher_review.reviewed_by_name || 'professor'} em ${formatDateTime(redacao.teacher_review.reviewed_at)}.`
                             : 'O professor pode aceitar a avaliação automática da IA ou registrar uma revisão própria.'}
                     />
+                    {renderAiQualityAlert()}
                     <label style={labelStyle}><b>Texto</b>:</label>
                     <TextArea rows={20} style={inputStyle} value={redacao.texto}
                         disabled />
