@@ -1,6 +1,7 @@
 import PageHeader from '@/components/ui/PageHeader'
 import PageShell from '@/components/ui/PageShell'
 import SectionPanel from '@/components/ui/SectionPanel'
+import { APP_VERSION } from '@/config/config'
 
 const Sobre = () => {
   return (
@@ -63,6 +64,9 @@ const Sobre = () => {
             <a href="https://github.com/AILAB-CEFET-RJ/quintana_tool" target="_blank" rel="noopener noreferrer">
               github.com/AILAB-CEFET-RJ/quintana_tool
             </a>
+          </p>
+          <p>
+            Versão atual: <strong>v{APP_VERSION}</strong>
           </p>
         </div>
       </SectionPanel>

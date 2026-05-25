@@ -95,6 +95,9 @@ Nesses casos, o `CHANGELOG.md` deve conter uma seção:
 Antes de liberar uma nova versão:
 
 - [ ] Definir número da versão.
+- [ ] Atualizar `NEXT_PUBLIC_APP_VERSION` no `.env` do ambiente de release.
+- [ ] Atualizar o valor padrão de `APP_VERSION` em `frontend/src/config/config.js`, quando necessário.
+- [ ] Atualizar `.env.example` com a versão corrente.
 - [ ] Atualizar `CHANGELOG.md`.
 - [ ] Registrar impactos no manual.
 - [ ] Atualizar documentação técnica afetada.
@@ -157,3 +160,21 @@ Eduardo
 ## Versão de referência
 
 A versão `v1.0.0` corresponde à primeira versão considerada madura para uso em oficinas.
+
+## Versão exibida na aplicação
+
+A página `Sobre` exibe a versão corrente a partir da variável pública:
+
+```env
+NEXT_PUBLIC_APP_VERSION=1.0.0
+```
+
+Se a variável não estiver definida, o frontend usa o valor padrão em `frontend/src/config/config.js`.
+
+Ao liberar uma nova versão, mantenha sincronizados:
+
+- tag Git;
+- seção correspondente em `CHANGELOG.md`;
+- `NEXT_PUBLIC_APP_VERSION` no ambiente;
+- `.env.example`;
+- versão exibida na página `Sobre`.
