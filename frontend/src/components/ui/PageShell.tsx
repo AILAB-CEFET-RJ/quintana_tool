@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { theme } from '@/styles/theme'
 
 interface PageShellProps {
   children: ReactNode
@@ -16,7 +17,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, maxWidth = 1180 }) => (
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: 'calc(100vh - 64px)',
-    background: '#f5f7fb',
+    background: theme.colors.bg,
     padding: '28px 24px 48px'
   },
   inner: {

@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../context'
 import { IS_WORKSHOP_MODE } from '@/config/config'
+import { theme } from '@/styles/theme'
 
 const { Header, Content } = Layout
 
@@ -76,7 +77,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const brandHref = isLoggedIn ? '/quintana/home' : '/quintana'
 
     return (
-        <Layout style={{ minHeight: '100vh', background: '#f5f7fb' }}>
+        <Layout style={{ minHeight: '100vh', background: theme.colors.bg, fontFamily: theme.fonts.sans }}>
             <Header style={styles.header}>
                 <div style={styles.headerInner}>
                     <Link href={brandHref} style={styles.brand}>
@@ -141,10 +142,11 @@ const styles: Record<string, CSSProperties> = {
         top: 0,
         zIndex: 10,
         width: '100%',
-        height: 64,
+        height: 60,
         padding: '0 24px',
-        background: '#0f172a',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+        background: 'rgba(234, 231, 226, 0.94)',
+        borderBottom: `1px solid ${theme.colors.rule}`,
+        backdropFilter: 'blur(12px)'
     },
     headerInner: {
         height: '100%',
@@ -159,24 +161,27 @@ const styles: Record<string, CSSProperties> = {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 10,
-        color: '#ffffff',
+        color: theme.colors.ink,
         textDecoration: 'none',
         flex: '0 0 auto'
     },
     brandMark: {
-        width: 34,
-        height: 34,
-        borderRadius: 8,
+        width: 32,
+        height: 32,
+        borderRadius: theme.radius.sm,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#1677ff',
-        color: '#ffffff',
-        fontWeight: 800
+        background: theme.colors.accent,
+        color: theme.colors.ink,
+        fontWeight: 800,
+        fontFamily: theme.fonts.serif,
+        fontSize: 21
     },
     brandText: {
-        fontSize: 18,
-        fontWeight: 700,
+        fontFamily: theme.fonts.serif,
+        fontSize: 21,
+        fontWeight: 500,
         letterSpacing: 0
     },
     nav: {
@@ -190,22 +195,25 @@ const styles: Record<string, CSSProperties> = {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 7,
-        color: '#cbd5e1',
+        color: theme.colors.inkLight,
         textDecoration: 'none',
-        padding: '8px 11px',
-        borderRadius: 8,
+        padding: '8px 10px',
+        borderRadius: theme.radius.sm,
         lineHeight: 1,
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        fontSize: 14,
+        letterSpacing: '0.03em'
     },
     navLinkActive: {
-        color: '#ffffff',
-        background: 'rgba(255, 255, 255, 0.1)'
+        color: theme.colors.ink,
+        background: theme.colors.surface2
     },
     userButton: {
         flex: '0 0 auto',
-        borderColor: 'rgba(255, 255, 255, 0.18)',
-        color: '#ffffff',
-        background: 'rgba(255, 255, 255, 0.08)'
+        borderColor: theme.colors.rule,
+        borderRadius: theme.radius.sm,
+        color: theme.colors.inkMid,
+        background: theme.colors.surface
     },
     workshopBanner: {
         display: 'flex',
@@ -214,9 +222,9 @@ const styles: Record<string, CSSProperties> = {
         justifyContent: 'center',
         flexWrap: 'wrap',
         padding: '8px 16px',
-        background: '#fff7e6',
-        borderBottom: '1px solid #ffd591',
-        color: '#7c4a03',
+        background: theme.colors.successBg,
+        borderBottom: `1px solid ${theme.colors.successBorder}`,
+        color: theme.colors.inkMid,
         fontSize: 13
     }
 }

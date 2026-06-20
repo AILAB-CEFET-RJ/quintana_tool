@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/context'
 import { IS_WORKSHOP_MODE } from '@/config/config'
+import { theme } from '@/styles/theme'
 
 const Index = () => {
   const { isLoggedIn } = useAuth()
@@ -51,35 +52,41 @@ const Index = () => {
 const styles: Record<string, CSSProperties> = {
   hero: {
     minHeight: 'calc(100vh - 64px)',
-    backgroundImage: 'linear-gradient(90deg, rgba(15, 23, 42, 0.84), rgba(15, 23, 42, 0.45)), url("/bookPages.jpg")',
+    backgroundImage: 'linear-gradient(90deg, rgba(244, 241, 236, 0.96), rgba(234, 231, 226, 0.78)), url("/bookPages.jpg")',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
     alignItems: 'center',
-    padding: '48px 8vw'
+    padding: '64px 8vw',
+    borderBottom: `1px solid ${theme.colors.rule}`
   },
   content: {
     maxWidth: 720,
-    color: '#ffffff'
+    color: theme.colors.ink
   },
   badge: {
     display: 'inline-flex',
-    border: '1px solid rgba(255, 255, 255, 0.34)',
-    borderRadius: 999,
-    padding: '7px 13px',
+    alignItems: 'center',
+    gap: 8,
+    color: theme.colors.accent,
+    padding: 0,
     marginBottom: 20,
-    background: 'rgba(255, 255, 255, 0.12)',
-    fontWeight: 700
+    background: 'transparent',
+    fontSize: 13,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase'
   },
   title: {
     margin: 0,
-    fontSize: 48,
+    fontFamily: theme.fonts.serif,
+    fontSize: 50,
     lineHeight: 1.08,
-    letterSpacing: 0
+    letterSpacing: 0,
+    fontWeight: 500
   },
   description: {
     margin: '18px 0 0',
-    color: '#e5e7eb',
+    color: theme.colors.inkMid,
     fontSize: 18,
     lineHeight: 1.65,
     maxWidth: 620
@@ -96,10 +103,10 @@ const styles: Record<string, CSSProperties> = {
     maxWidth: 520,
     marginTop: 20,
     padding: 14,
-    border: '1px solid rgba(255, 255, 255, 0.32)',
-    borderRadius: 8,
-    background: 'rgba(255, 255, 255, 0.13)',
-    color: '#ffffff'
+    border: `1px solid ${theme.colors.successBorder}`,
+    borderRadius: theme.radius.md,
+    background: theme.colors.successBg,
+    color: theme.colors.inkMid
   }
 }
 

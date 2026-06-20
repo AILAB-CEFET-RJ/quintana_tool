@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { theme } from '@/styles/theme'
 
 interface PageHeaderProps {
   title: string
@@ -27,15 +28,18 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     margin: 0,
-    color: '#111827',
-    fontSize: 28,
+    color: theme.colors.ink,
+    fontFamily: theme.fonts.serif,
+    fontSize: 34,
     lineHeight: 1.2,
-    fontWeight: 700
+    fontWeight: 500,
+    letterSpacing: 0
   },
   description: {
     margin: '8px 0 0',
-    color: '#6b7280',
-    fontSize: 15,
+    color: theme.colors.inkLight,
+    fontSize: 16,
+    lineHeight: 1.65,
     maxWidth: 720
   },
   actions: {

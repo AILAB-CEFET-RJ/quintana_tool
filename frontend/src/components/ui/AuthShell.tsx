@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { theme } from '@/styles/theme'
 
 interface AuthShellProps {
   title: string
@@ -34,41 +35,47 @@ const styles: Record<string, CSSProperties> = {
     minHeight: 'calc(100vh - 64px)',
     display: 'grid',
     gridTemplateColumns: 'minmax(320px, 1fr) minmax(360px, 520px)',
-    background: '#f5f7fb'
+    background: theme.colors.bg
   },
   brandPanel: {
     minHeight: 520,
-    backgroundImage: 'linear-gradient(90deg, rgba(9, 30, 66, 0.82), rgba(9, 30, 66, 0.48)), url("/bookPages.jpg")',
+    backgroundImage: 'linear-gradient(90deg, rgba(244, 241, 236, 0.92), rgba(244, 241, 236, 0.72)), url("/bookPages.jpg")',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
-    alignItems: 'flex-end'
+    alignItems: 'flex-end',
+    borderRight: `1px solid ${theme.colors.rule}`
   },
   brandOverlay: {
     padding: '56px',
     maxWidth: 680,
-    color: '#ffffff'
+    color: theme.colors.ink
   },
   badge: {
     display: 'inline-flex',
-    border: '1px solid rgba(255, 255, 255, 0.36)',
-    borderRadius: 999,
+    border: `1px solid ${theme.colors.rule}`,
+    borderRadius: theme.radius.sm,
     padding: '6px 12px',
     marginBottom: 18,
-    background: 'rgba(255, 255, 255, 0.12)',
-    fontWeight: 700
+    background: theme.colors.surface,
+    color: theme.colors.inkPale,
+    fontSize: 12,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase'
   },
   brandTitle: {
     margin: 0,
-    fontSize: 40,
+    fontFamily: theme.fonts.serif,
+    fontSize: 42,
     lineHeight: 1.1,
-    letterSpacing: 0
+    letterSpacing: 0,
+    fontWeight: 500
   },
   brandText: {
     margin: '18px 0 0',
     fontSize: 17,
     lineHeight: 1.65,
-    color: '#e5e7eb'
+    color: theme.colors.inkLight
   },
   formPanel: {
     display: 'flex',
@@ -79,24 +86,26 @@ const styles: Record<string, CSSProperties> = {
   formCard: {
     width: '100%',
     maxWidth: 420,
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    background: '#ffffff',
+    border: `1px solid ${theme.colors.rule}`,
+    borderRadius: theme.radius.md,
+    background: theme.colors.surface,
     padding: 28,
-    boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)'
+    boxShadow: `0 18px 45px ${theme.colors.shadow}`
   },
   formHeader: {
     marginBottom: 22
   },
   title: {
     margin: 0,
-    color: '#111827',
-    fontSize: 26,
-    lineHeight: 1.2
+    color: theme.colors.ink,
+    fontFamily: theme.fonts.serif,
+    fontSize: 30,
+    lineHeight: 1.2,
+    fontWeight: 500
   },
   subtitle: {
     margin: '8px 0 0',
-    color: '#6b7280',
+    color: theme.colors.inkLight,
     lineHeight: 1.5
   }
 }

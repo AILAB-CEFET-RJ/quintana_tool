@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { theme } from '@/styles/theme'
 
 interface SectionPanelProps {
   children: ReactNode
@@ -24,9 +25,9 @@ const SectionPanel: React.FC<SectionPanelProps> = ({ children, title, descriptio
 
 const styles: Record<string, CSSProperties> = {
   panel: {
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    background: '#ffffff',
+    border: `1px solid ${theme.colors.rule}`,
+    borderRadius: theme.radius.md,
+    background: theme.colors.surface,
     padding: 18,
     marginBottom: 16
   },
@@ -40,13 +41,15 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     margin: 0,
-    fontSize: 18,
+    fontFamily: theme.fonts.serif,
+    fontSize: 22,
+    fontWeight: 500,
     lineHeight: 1.25,
-    color: '#111827'
+    color: theme.colors.ink
   },
   description: {
     margin: '4px 0 0',
-    color: '#6b7280'
+    color: theme.colors.inkLight
   }
 }
 
