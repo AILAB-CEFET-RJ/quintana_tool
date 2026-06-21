@@ -71,45 +71,81 @@ Esse formato espera que o modelo retorne um vetor com cinco posições, uma para
   "runtime": "lora",
   "models": {
     "c1": {
-      "name": "single_lora_c1",
+      "name": "single_lora_v1_c1",
       "runtime": "lora",
-      "path": "adapters/single/c1",
-      "base_model": "FacebookAI/xlm-roberta-large",
-      "strategy": "truncate_512"
+      "path": "adapters/single_lora_v1/c1",
+      "base_model": "neuralmind/bert-large-portuguese-cased",
+      "strategy": "sliding_window_512",
+      "tokenizer_max_length": 512,
+      "sliding_window_stride": 256,
+      "sliding_window_min_tokens": 32,
+      "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+      "use_prompt_pair": false
     },
     "c2": {
-      "name": "single_lora_c2",
+      "name": "single_lora_v1_c2",
       "runtime": "lora",
-      "path": "adapters/single/c2",
-      "base_model": "FacebookAI/xlm-roberta-large",
-      "strategy": "truncate_512"
+      "path": "adapters/single_lora_v1/c2",
+      "base_model": "neuralmind/bert-large-portuguese-cased",
+      "strategy": "sliding_window_512",
+      "tokenizer_max_length": 512,
+      "sliding_window_stride": 256,
+      "sliding_window_min_tokens": 32,
+      "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+      "use_prompt_pair": false
     },
     "c3": {
-      "name": "single_lora_c3",
+      "name": "single_lora_v1_c3",
       "runtime": "lora",
-      "path": "adapters/single/c3",
-      "base_model": "FacebookAI/xlm-roberta-large",
-      "strategy": "truncate_512"
+      "path": "adapters/single_lora_v1/c3",
+      "base_model": "neuralmind/bert-large-portuguese-cased",
+      "strategy": "sliding_window_512",
+      "tokenizer_max_length": 512,
+      "sliding_window_stride": 256,
+      "sliding_window_min_tokens": 32,
+      "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+      "use_prompt_pair": false
     },
     "c4": {
-      "name": "single_lora_c4",
+      "name": "single_lora_v1_c4",
       "runtime": "lora",
-      "path": "adapters/single/c4",
-      "base_model": "FacebookAI/xlm-roberta-large",
-      "strategy": "truncate_512"
+      "path": "adapters/single_lora_v1/c4",
+      "base_model": "neuralmind/bert-large-portuguese-cased",
+      "strategy": "sliding_window_512",
+      "tokenizer_max_length": 512,
+      "sliding_window_stride": 256,
+      "sliding_window_min_tokens": 32,
+      "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+      "use_prompt_pair": false
     },
     "c5": {
-      "name": "single_lora_c5",
+      "name": "single_lora_v1_c5",
       "runtime": "lora",
-      "path": "adapters/single/c5",
-      "base_model": "FacebookAI/xlm-roberta-large",
-      "strategy": "truncate_512"
+      "path": "adapters/single_lora_v1/c5",
+      "base_model": "neuralmind/bert-large-portuguese-cased",
+      "strategy": "sliding_window_512",
+      "tokenizer_max_length": 512,
+      "sliding_window_stride": 256,
+      "sliding_window_min_tokens": 32,
+      "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+      "use_prompt_pair": false
     }
   }
 }
 ```
 
 Nesse formato, o backend executa os cinco modelos e agrega as saídas em uma única avaliação.
+
+Os campos `strategy`, `tokenizer_max_length`, `sliding_window_stride`,
+`sliding_window_min_tokens`, `script_type` e `use_prompt_pair` devem refletir os
+metadados salvos no `results.json` do treinamento. Para modelos treinados com
+`sliding_window_512`, a inferência também divide redações longas em janelas,
+executa o modelo em cada janela, calcula a média dos logits e só então escolhe a
+classe final.
+
+O bundle `single_lora_v1` atual foi treinado com `use_prompt_pair=false`. Modelos
+futuros treinados com prompt-pair exigem suporte adicional para receber tema e
+contexto motivador na inferência.
 
 ## Seleção do modelo ativo
 

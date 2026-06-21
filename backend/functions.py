@@ -167,6 +167,9 @@ def _evaluate_multi_output_lora(redacao, model_config, conjunto):
         adapter_path=model_config["path"],
         base_model_name=model_config.get("base_model"),
         strategy=model_config.get("strategy", "truncate_512"),
+        max_length=int(model_config.get("tokenizer_max_length", 512)),
+        stride=int(model_config.get("sliding_window_stride", 256)),
+        min_tokens=int(model_config.get("sliding_window_min_tokens", 32)),
         conjunto=conjunto,
         as_scores=True,
     )
@@ -195,6 +198,9 @@ def _evaluate_single_output_lora(redacao, component_config):
         adapter_path=component_config["path"],
         base_model_name=component_config.get("base_model"),
         strategy=component_config.get("strategy", "truncate_512"),
+        max_length=int(component_config.get("tokenizer_max_length", 512)),
+        stride=int(component_config.get("sliding_window_stride", 256)),
+        min_tokens=int(component_config.get("sliding_window_min_tokens", 32)),
         as_scores=True,
     )
     return _normalize_score(result[0]["score"])

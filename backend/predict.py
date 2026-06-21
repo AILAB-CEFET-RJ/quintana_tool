@@ -10,14 +10,19 @@ Uso:
 """
 
 import argparse
+import json
+import os
 import sys
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer
 from peft import PeftModel
 
 def apply_head_tail_token_ids(token_ids, payload_max_length):
+    if payload_max_length <= 0:
+        raise ValueError("payload_max_length must be > 0")
+
     if len(token_ids) <= payload_max_length:
         return token_ids
     head_len = payload_max_length // 2
@@ -26,6 +31,13 @@ def apply_head_tail_token_ids(token_ids, payload_max_length):
 
 
 def create_sliding_window_token_ids(token_ids, payload_max_length, stride, min_payload_length=32):
+    if payload_max_length <= 0:
+        raise ValueError("payload_max_length must be > 0")
+    if stride <= 0:
+        raise ValueError("stride must be > 0")
+    if min_payload_length <= 0:
+        raise ValueError("min_payload_length must be > 0")
+
     if len(token_ids) <= payload_max_length:
         return [token_ids]
     windows = []
@@ -119,6 +131,14 @@ def load_tokenizer(base_model_name: str = BASE_MODEL_NAME):
     return _TOKENIZER_CACHE[base_model_name]
 
 
+def _read_adapter_config(adapter_path):
+    config_path = os.path.join(adapter_path, "adapter_config.json")
+    if not os.path.exists(config_path):
+        return {}
+    with open(config_path, "r") as f:
+        return json.load(f)
+
+
 def load_model(adapter_path: str, base_model_name: str = BASE_MODEL_NAME, device=None, output_mode="multi_output"):
     base_model_name = _resolve_base_model_name(base_model_name)
     if device is None:
@@ -130,7 +150,11 @@ def load_model(adapter_path: str, base_model_name: str = BASE_MODEL_NAME, device
 
     print(f"[INFO] Carregando modelo base: {base_model_name}")
     if output_mode == "single_output":
-        base = SingleOutputClassifier(base_model_name, num_classes=6)
+        adapter_config = _read_adapter_config(adapter_path)
+        if adapter_config.get("task_type") == "SEQ_CLS":
+            base = AutoModelForSequenceClassification.from_pretrained(base_model_name, num_labels=6)
+        else:
+            base = SingleOutputClassifier(base_model_name, num_classes=6)
     else:
         base = MultiOutputClassifier(base_model_name, num_classes_per_label=[6, 6, 6, 6, 6])
 
@@ -154,7 +178,7 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
     for essay_idx, text in enumerate(texts):
         token_ids = tokenizer.encode(text, add_special_tokens=False)
 
-        if strategy == "truncate_512":
+        if strategy in {"truncate_512", "full_context"}:
             windows = [token_ids[:payload_max]]
         elif strategy == "head_tail_512":
             windows = [apply_head_tail_token_ids(token_ids, payload_max_length=payload_max)]
@@ -169,7 +193,7 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
             raise ValueError(f"strategy inválida: '{strategy}'")
 
         for window_token_ids in windows:
-            merged = [tokenizer.bos_token_id] + window_token_ids + [tokenizer.eos_token_id]
+            merged = tokenizer.build_inputs_with_special_tokens(window_token_ids)
             all_input_ids.append(merged)
             all_attention_masks.append([1] * len(merged))
             all_essay_ids.append(essay_idx)
@@ -199,6 +223,7 @@ def predict(
     adapter_path: str,
     base_model_name: str = BASE_MODEL_NAME,
     strategy: str = "truncate_512",
+    max_length: int = 512,
     stride: int = 256,
     min_tokens: int = 32,
     batch_size: int = 8,
@@ -212,7 +237,8 @@ def predict(
         texts: lista de strings com as redações.
         adapter_path: caminho para a pasta com adapter_config.json e adapter_model.safetensors.
         base_model_name: nome do modelo base no HuggingFace Hub.
-        strategy: estratégia de tokenização ('truncate_512', 'head_tail_512', 'sliding_window_512').
+        strategy: estratégia de tokenização ('truncate_512', 'head_tail_512', 'sliding_window_512' ou 'full_context').
+        max_length: comprimento máximo da sequência após special tokens.
         stride: stride para sliding_window_512 (padrão: 256).
         min_tokens: mínimo de tokens por janela para sliding_window_512 (padrão: 32).
         batch_size: tamanho do batch na inferência.
@@ -230,7 +256,7 @@ def predict(
     model = load_model(adapter_path, base_model_name, device, output_mode="multi_output")
 
     all_input_ids, all_attention_masks, all_essay_ids = _tokenize_texts(
-        texts, tokenizer, strategy, stride=stride, min_tokens=min_tokens
+        texts, tokenizer, strategy, max_length=max_length, stride=stride, min_tokens=min_tokens
     )
 
     # Acumulador para sliding window: essay_id → lista de logits por head
@@ -284,6 +310,7 @@ def predict_single_output(
     adapter_path: str,
     base_model_name: str = BASE_MODEL_NAME,
     strategy: str = "truncate_512",
+    max_length: int = 512,
     stride: int = 256,
     min_tokens: int = 32,
     batch_size: int = 8,
@@ -303,7 +330,7 @@ def predict_single_output(
     model = load_model(adapter_path, base_model_name, device, output_mode="single_output")
 
     all_input_ids, all_attention_masks, all_essay_ids = _tokenize_texts(
-        texts, tokenizer, strategy, stride=stride, min_tokens=min_tokens
+        texts, tokenizer, strategy, max_length=max_length, stride=stride, min_tokens=min_tokens
     )
 
     accumulator = {i: [] for i in range(len(texts))}
@@ -320,7 +347,7 @@ def predict_single_output(
         with torch.no_grad():
             out = model(input_ids=input_ids, attention_mask=attention_mask)
 
-        logits = out["logits"]
+        logits = out["logits"] if isinstance(out, dict) else out.logits
         for row_idx, essay_id in enumerate(batch_essay_ids):
             accumulator[essay_id].append(logits[row_idx].detach().cpu())
 
@@ -339,7 +366,8 @@ def main():
     parser.add_argument("--texts", nargs="+", required=True, help="Textos das redações")
     parser.add_argument("--base_model", default=BASE_MODEL_NAME, help="Modelo base HuggingFace")
     parser.add_argument("--strategy", default="truncate_512",
-                        choices=["truncate_512", "head_tail_512", "sliding_window_512"])
+                        choices=["truncate_512", "head_tail_512", "sliding_window_512", "full_context"])
+    parser.add_argument("--max_length", type=int, default=512)
     parser.add_argument("--stride", type=int, default=256)
     parser.add_argument("--min_tokens", type=int, default=32)
     parser.add_argument("--batch_size", type=int, default=8)
@@ -353,6 +381,7 @@ def main():
         adapter_path=args.adapter_path,
         base_model_name=args.base_model,
         strategy=args.strategy,
+        max_length=args.max_length,
         stride=args.stride,
         min_tokens=args.min_tokens,
         batch_size=args.batch_size,

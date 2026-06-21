@@ -11,6 +11,73 @@
             "strategy": "truncate_512"
         },
         {
+            "name": "single_lora_v1",
+            "output_mode": "single_output_bundle",
+            "runtime": "lora",
+            "models": {
+                "c1": {
+                    "name": "single_lora_v1_c1",
+                    "runtime": "lora",
+                    "path": "adapters/single_lora_v1/c1",
+                    "base_model": "neuralmind/bert-large-portuguese-cased",
+                    "strategy": "sliding_window_512",
+                    "tokenizer_max_length": 512,
+                    "sliding_window_stride": 256,
+                    "sliding_window_min_tokens": 32,
+                    "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+                    "use_prompt_pair": false
+                },
+                "c2": {
+                    "name": "single_lora_v1_c2",
+                    "runtime": "lora",
+                    "path": "adapters/single_lora_v1/c2",
+                    "base_model": "neuralmind/bert-large-portuguese-cased",
+                    "strategy": "sliding_window_512",
+                    "tokenizer_max_length": 512,
+                    "sliding_window_stride": 256,
+                    "sliding_window_min_tokens": 32,
+                    "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+                    "use_prompt_pair": false
+                },
+                "c3": {
+                    "name": "single_lora_v1_c3",
+                    "runtime": "lora",
+                    "path": "adapters/single_lora_v1/c3",
+                    "base_model": "neuralmind/bert-large-portuguese-cased",
+                    "strategy": "sliding_window_512",
+                    "tokenizer_max_length": 512,
+                    "sliding_window_stride": 256,
+                    "sliding_window_min_tokens": 32,
+                    "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+                    "use_prompt_pair": false
+                },
+                "c4": {
+                    "name": "single_lora_v1_c4",
+                    "runtime": "lora",
+                    "path": "adapters/single_lora_v1/c4",
+                    "base_model": "neuralmind/bert-large-portuguese-cased",
+                    "strategy": "sliding_window_512",
+                    "tokenizer_max_length": 512,
+                    "sliding_window_stride": 256,
+                    "sliding_window_min_tokens": 32,
+                    "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+                    "use_prompt_pair": false
+                },
+                "c5": {
+                    "name": "single_lora_v1_c5",
+                    "runtime": "lora",
+                    "path": "adapters/single_lora_v1/c5",
+                    "base_model": "neuralmind/bert-large-portuguese-cased",
+                    "strategy": "sliding_window_512",
+                    "tokenizer_max_length": 512,
+                    "sliding_window_stride": 256,
+                    "sliding_window_min_tokens": 32,
+                    "script_type": "ORDINAL_CLASSIFICATION_WITH_WK_LOSS",
+                    "use_prompt_pair": false
+                }
+            }
+        },
+        {
             "name": "checkpoint_07_08",
             "output_mode": "multi_output",
             "runtime": "pkl",
