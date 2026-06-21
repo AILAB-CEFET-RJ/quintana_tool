@@ -202,17 +202,21 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
 
 
 def _build_input_ids_with_special_tokens(tokenizer, token_ids):
-    if hasattr(tokenizer, "build_inputs_with_special_tokens"):
-        return tokenizer.build_inputs_with_special_tokens(token_ids)
+    cls_token_id = getattr(tokenizer, "cls_token_id", None)
+    sep_token_id = getattr(tokenizer, "sep_token_id", None)
+    bos_token_id = getattr(tokenizer, "bos_token_id", None)
+    eos_token_id = getattr(tokenizer, "eos_token_id", None)
 
-    prepared = tokenizer.prepare_for_model(
-        token_ids,
-        add_special_tokens=True,
-        return_attention_mask=False,
-        return_token_type_ids=False,
-        truncation=False,
-    )
-    return prepared["input_ids"]
+    start_token_id = cls_token_id if cls_token_id is not None else bos_token_id
+    end_token_id = sep_token_id if sep_token_id is not None else eos_token_id
+
+    if start_token_id is None or end_token_id is None:
+        raise ValueError(
+            "Tokenizer sem tokens especiais de início/fim conhecidos. "
+            "Configure tokenizer com cls/sep ou bos/eos."
+        )
+
+    return [start_token_id] + token_ids + [end_token_id]
 
 
 def _pad_batch(input_ids_list, attention_masks_list, tokenizer):
