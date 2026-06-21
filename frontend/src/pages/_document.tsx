@@ -5,8 +5,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-      <link rel="icon" href="/favicon.ico" sizes="any" />
-      <link rel="icon" href="/quintana-icon.svg" type="image/svg+xml" />
+      <link rel="icon" href="/q3.png" type="image/png" />
+      <link rel="shortcut icon" href="/q3.png" type="image/png" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" />
       <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet" />

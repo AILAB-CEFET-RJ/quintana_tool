@@ -2,6 +2,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import PageShell from '@/components/ui/PageShell'
 import SectionPanel from '@/components/ui/SectionPanel'
 import { COMPETENCIES } from '@/lib/competencias'
+import { theme } from '@/styles/theme'
 
 const Competencias = () => {
   return (
@@ -18,8 +19,8 @@ const Competencias = () => {
                 width: 44,
                 height: 44,
                 borderRadius: 8,
-                background: '#e6f4ff',
-                color: '#0958d9',
+                background: theme.colors.accentBg,
+                color: theme.colors.inkMid,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

@@ -81,8 +81,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             <Header style={styles.header}>
                 <div style={styles.headerInner}>
                     <Link href={brandHref} style={styles.brand}>
-                        <span style={styles.brandMark}>Q</span>
-                        <span style={styles.brandText}>Quintana</span>
+                        <img src="/q3.png" alt="" style={styles.brandImage} />
                     </Link>
 
                     <nav style={styles.nav}>
@@ -160,23 +159,16 @@ const styles: Record<string, CSSProperties> = {
     brand: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 0,
         color: theme.colors.ink,
         textDecoration: 'none',
         flex: '0 0 auto'
     },
-    brandMark: {
-        width: 32,
-        height: 32,
-        borderRadius: theme.radius.sm,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: theme.colors.accent,
-        color: theme.colors.ink,
-        fontWeight: 800,
-        fontFamily: theme.fonts.serif,
-        fontSize: 21
+    brandImage: {
+        width: 76,
+        height: 38,
+        display: 'block',
+        objectFit: 'contain'
     },
     brandText: {
         fontFamily: theme.fonts.serif,

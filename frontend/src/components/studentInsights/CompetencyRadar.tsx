@@ -1,4 +1,5 @@
 import { getCompetencyScores } from '@/lib/competencias'
+import { theme } from '@/styles/theme'
 import type React from 'react'
 import type { CSSProperties } from 'react'
 
@@ -54,13 +55,13 @@ const CompetencyRadar: React.FC<CompetencyRadarProps> = ({
             const end = guidePointFor(index, maxRadius)
             return <line key={index} x1={center} y1={center} x2={end.x} y2={end.y} stroke="#e5e7eb" />
           })}
-          <polygon points={polygon} fill="rgba(22, 119, 255, 0.18)" stroke="#1677ff" strokeWidth="2" />
+          <polygon points={polygon} fill="rgba(143, 199, 200, 0.22)" stroke={theme.colors.accent} strokeWidth="2" />
           {scores.map((item, index) => {
             const point = pointFor(index, item.score)
             const label = guidePointFor(index, maxRadius + 26)
             return (
               <g key={item.code}>
-                <circle cx={point.x} cy={point.y} r="4" fill="#1677ff" />
+                <circle cx={point.x} cy={point.y} r="4" fill={theme.colors.accent} />
                 <text x={label.x} y={label.y} textAnchor="middle" dominantBaseline="middle" fontSize="12" fill="#374151">
                   {item.code}
                 </text>
@@ -118,7 +119,7 @@ const styles: Record<string, CSSProperties> = {
   },
   code: {
     fontWeight: 700,
-    color: '#1677ff'
+    color: theme.colors.accent
   },
   label: {
     color: '#374151'

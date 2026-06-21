@@ -10,6 +10,7 @@ export const theme = {
     rule: '#D3CEC6',
     ruleLight: '#E2DED8',
     accent: '#8FC7C8',
+    accentInk: '#111111',
     accentBg: '#DDEEEF',
     accentBorder: '#B8D7D8',
     successBg: '#E7DDCA',

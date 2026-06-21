@@ -3,6 +3,7 @@ import { InfoCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type React from 'react'
 import type { CSSProperties } from 'react'
+import { theme } from '@/styles/theme'
 
 interface TeacherAnalyticsPanelProps {
   data: any
@@ -12,14 +13,14 @@ const competencyColor = (score: number) => {
   if (score < 80) return '#fff1f0'
   if (score < 120) return '#fff7e6'
   if (score < 160) return '#f6ffed'
-  return '#e6f4ff'
+  return theme.colors.accentBg
 }
 
 const competencyTextColor = (score: number) => {
   if (score < 80) return '#a8071a'
   if (score < 120) return '#ad6800'
   if (score < 160) return '#237804'
-  return '#0958d9'
+  return theme.colors.inkMid
 }
 
 const TeacherAnalyticsPanel: React.FC<TeacherAnalyticsPanelProps> = ({ data }) => {
@@ -148,11 +149,11 @@ const Boxplot: React.FC<{ item: any }> = ({ item }) => {
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Boxplot ${item.competency}`}>
       <line x1="8" y1={y} x2={width - 8} y2={y} stroke="#eef2f7" strokeWidth="6" strokeLinecap="round" />
-      <line x1={lower} y1={y} x2={upper} y2={y} stroke="#1677ff" strokeWidth="2" />
-      <line x1={lower} y1={y - 8} x2={lower} y2={y + 8} stroke="#1677ff" strokeWidth="2" />
-      <line x1={upper} y1={y - 8} x2={upper} y2={y + 8} stroke="#1677ff" strokeWidth="2" />
-      <rect x={q1} y={y - 12} width={Math.max(q3 - q1, 2)} height="24" rx="4" fill="#e6f4ff" stroke="#1677ff" />
-      <line x1={medianX} y1={y - 14} x2={medianX} y2={y + 14} stroke="#0958d9" strokeWidth="3" />
+      <line x1={lower} y1={y} x2={upper} y2={y} stroke={theme.colors.accent} strokeWidth="2" />
+      <line x1={lower} y1={y - 8} x2={lower} y2={y + 8} stroke={theme.colors.accent} strokeWidth="2" />
+      <line x1={upper} y1={y - 8} x2={upper} y2={y + 8} stroke={theme.colors.accent} strokeWidth="2" />
+      <rect x={q1} y={y - 12} width={Math.max(q3 - q1, 2)} height="24" rx="4" fill={theme.colors.accentBg} stroke={theme.colors.accent} />
+      <line x1={medianX} y1={y - 14} x2={medianX} y2={y + 14} stroke={theme.colors.inkMid} strokeWidth="3" />
       {(item.outliers || []).map((value: number, index: number) => (
         <circle key={`${value}-${index}`} cx={x(value)} cy={y} r="3" fill="#cf1322" />
       ))}
@@ -258,10 +259,10 @@ const ClassEvolution: React.FC<{ evolution: any[] }> = ({ evolution }) => {
               </g>
             )
           })}
-          <polyline points={points} fill="none" stroke="#1677ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={points} fill="none" stroke={theme.colors.accent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           {evolution.map((item, index) => (
             <g key={item.theme_id || index}>
-              <circle cx={xFor(index)} cy={yFor(item.total_average)} r="4" fill="#1677ff" />
+              <circle cx={xFor(index)} cy={yFor(item.total_average)} r="4" fill={theme.colors.accent} />
               <text x={xFor(index)} y={height - 18} textAnchor="middle" fontSize="11" fill="#6b7280">
                 {item.group_by === 'week' ? item.label.slice(5) : `${index + 1}`}
               </text>
@@ -329,8 +330,8 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#e6f4ff',
-    color: '#0958d9',
+    background: theme.colors.accentBg,
+    color: theme.colors.inkMid,
     fontWeight: 800,
     flex: '0 0 auto'
   },

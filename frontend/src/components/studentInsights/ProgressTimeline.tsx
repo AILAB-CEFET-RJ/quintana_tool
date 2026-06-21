@@ -1,4 +1,5 @@
 import { getCompetencyScores } from '@/lib/competencias'
+import { theme } from '@/styles/theme'
 import type React from 'react'
 import type { CSSProperties } from 'react'
 
@@ -14,7 +15,7 @@ const plotWidth = chartWidth - padding.left - padding.right
 const plotHeight = chartHeight - padding.top - padding.bottom
 const competencyPlotHeight = competencyChartHeight - padding.top - padding.bottom
 const competencyColors: Record<string, string> = {
-  C1: '#1677ff',
+  C1: theme.colors.accent,
   C2: '#13a8a8',
   C3: '#722ed1',
   C4: '#d46b08',
@@ -141,14 +142,14 @@ const ProgressTimeline: React.FC<ProgressTimelineProps> = ({ redacoes }) => {
               </g>
             )
           })}
-          <polyline points={totalPolyline} fill="none" stroke="#1677ff" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+          <polyline points={totalPolyline} fill="none" stroke={theme.colors.accent} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
           {ordered.map((redacao, index) => {
             const x = xFor(index, ordered.length)
             const y = yFor(Number(redacao.nota_total) || 0)
             const date = getDateValue(redacao)
             return (
               <g key={redacao._id || index}>
-                <circle cx={x} cy={y} r="4" fill="#1677ff" />
+                <circle cx={x} cy={y} r="4" fill={theme.colors.accent} />
                 <text x={x} y={chartHeight - 18} textAnchor="middle" fontSize="12" fill="#6b7280">{formatDate(date)}</text>
               </g>
             )
@@ -343,7 +344,7 @@ const styles: Record<string, CSSProperties> = {
   },
   barLabel: {
     fontWeight: 700,
-    color: '#1677ff'
+    color: theme.colors.accent
   },
   barTrack: {
     height: 8,
@@ -352,7 +353,7 @@ const styles: Record<string, CSSProperties> = {
   },
   barFill: {
     height: '100%',
-    background: '#69b1ff',
+    background: theme.colors.accent,
     borderRadius: 999
   },
   barScore: {

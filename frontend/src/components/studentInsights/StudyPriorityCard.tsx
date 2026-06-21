@@ -1,4 +1,5 @@
 import { getCompetencyScores } from '@/lib/competencias'
+import { theme } from '@/styles/theme'
 import type React from 'react'
 import type { CSSProperties } from 'react'
 
@@ -58,8 +59,8 @@ const styles: Record<string, CSSProperties> = {
     width: 38,
     height: 32,
     borderRadius: 6,
-    background: '#e6f4ff',
-    color: '#0958d9',
+    background: theme.colors.accentBg,
+    color: theme.colors.inkMid,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
