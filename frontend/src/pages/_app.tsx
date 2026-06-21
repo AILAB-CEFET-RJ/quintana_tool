@@ -19,12 +19,12 @@ export default function App({ Component, pageProps }: AppProps) {
           colorSuccess: '#5C7A3B',
           colorWarning: '#C6A96B',
           colorError: '#A13D3D',
+          colorTextLightSolid: theme.colors.accentInk,
           borderRadius: theme.radius.md,
           fontFamily: theme.fonts.sans
         },
         components: {
           Button: {
-            primaryColor: theme.colors.accentInk,
             colorPrimaryHover: theme.colors.accentBorder,
             colorPrimaryActive: theme.colors.accentBorder
           }

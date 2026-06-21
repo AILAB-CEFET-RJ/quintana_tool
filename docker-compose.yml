@@ -12,6 +12,7 @@ services:
     restart: always
     networks:
       - my_custom_network
+    gpus: all
 
   frontend:
     container_name: quintana_frontend
