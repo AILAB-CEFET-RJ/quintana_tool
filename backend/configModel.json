@@ -1,6 +1,6 @@
 {
     "comentario": "output_mode descreve o formato da saida; runtime descreve como o modelo e carregado/executado.",
-    "model": "principal",
+    "model": "single_lora_v1",
     "available_models": [
         {
             "name": "principal",
