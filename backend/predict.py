@@ -193,12 +193,26 @@ def _tokenize_texts(texts, tokenizer, strategy, max_length=512, stride=256, min_
             raise ValueError(f"strategy inválida: '{strategy}'")
 
         for window_token_ids in windows:
-            merged = tokenizer.build_inputs_with_special_tokens(window_token_ids)
+            merged = _build_input_ids_with_special_tokens(tokenizer, window_token_ids)
             all_input_ids.append(merged)
             all_attention_masks.append([1] * len(merged))
             all_essay_ids.append(essay_idx)
 
     return all_input_ids, all_attention_masks, all_essay_ids
+
+
+def _build_input_ids_with_special_tokens(tokenizer, token_ids):
+    if hasattr(tokenizer, "build_inputs_with_special_tokens"):
+        return tokenizer.build_inputs_with_special_tokens(token_ids)
+
+    prepared = tokenizer.prepare_for_model(
+        token_ids,
+        add_special_tokens=True,
+        return_attention_mask=False,
+        return_token_type_ids=False,
+        truncation=False,
+    )
+    return prepared["input_ids"]
 
 
 def _pad_batch(input_ids_list, attention_masks_list, tokenizer):
