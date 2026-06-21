@@ -196,3 +196,5 @@ cython_debug/
 .codex
 .claude/
 docs/sbbd.tex
+
+bundles/

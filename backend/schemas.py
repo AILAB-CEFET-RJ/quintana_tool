@@ -61,6 +61,9 @@ class AiEvaluation(TypedDict, total=False):
     model_name: str
     model_version: str
     model_type: str
+    model_runtime: str
+    model_output_mode: str
+    model_components: Dict[str, Any]
     created_at: str
 
 

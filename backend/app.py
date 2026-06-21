@@ -72,6 +72,9 @@ def build_ai_evaluation_metadata(created_at):
         "model_name": model_info.get("name"),
         "model_version": model_info.get("version"),
         "model_type": model_info.get("type"),
+        "model_runtime": model_info.get("runtime"),
+        "model_output_mode": model_info.get("output_mode"),
+        "model_components": model_info.get("components", {}),
         "created_at": created_at,
     }
 

@@ -42,6 +42,8 @@ def create_sliding_window_token_ids(token_ids, payload_max_length, stride, min_p
 
 
 BASE_MODEL_NAME = "FacebookAI/xlm-roberta-large"
+_TOKENIZER_CACHE = {}
+_MODEL_CACHE = {}
 
 COMPETENCIES = {
     1: [
@@ -91,17 +93,52 @@ class MultiOutputClassifier(nn.Module):
         return {"logits": logits}
 
 
-def load_model(adapter_path: str, base_model_name: str = BASE_MODEL_NAME, device=None):
+class SingleOutputClassifier(nn.Module):
+    def __init__(self, base_model_name, num_classes=6, dropout_rate=0.3):
+        super().__init__()
+        self.base = AutoModel.from_pretrained(base_model_name)
+        hidden_size = self.base.config.hidden_size
+        self.dropout = nn.Dropout(dropout_rate)
+        self.head = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.base(input_ids=input_ids, attention_mask=attention_mask)
+        pooled = outputs.last_hidden_state[:, 0, :]
+        pooled = self.dropout(pooled)
+        return {"logits": self.head(pooled)}
+
+
+def _resolve_base_model_name(base_model_name=None):
+    return base_model_name or BASE_MODEL_NAME
+
+
+def load_tokenizer(base_model_name: str = BASE_MODEL_NAME):
+    base_model_name = _resolve_base_model_name(base_model_name)
+    if base_model_name not in _TOKENIZER_CACHE:
+        _TOKENIZER_CACHE[base_model_name] = AutoTokenizer.from_pretrained(base_model_name)
+    return _TOKENIZER_CACHE[base_model_name]
+
+
+def load_model(adapter_path: str, base_model_name: str = BASE_MODEL_NAME, device=None, output_mode="multi_output"):
+    base_model_name = _resolve_base_model_name(base_model_name)
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    cache_key = (output_mode, adapter_path, base_model_name, str(device))
+    if cache_key in _MODEL_CACHE:
+        return _MODEL_CACHE[cache_key]
+
     print(f"[INFO] Carregando modelo base: {base_model_name}")
-    base = MultiOutputClassifier(base_model_name, num_classes_per_label=[6, 6, 6, 6, 6])
+    if output_mode == "single_output":
+        base = SingleOutputClassifier(base_model_name, num_classes=6)
+    else:
+        base = MultiOutputClassifier(base_model_name, num_classes_per_label=[6, 6, 6, 6, 6])
 
     print(f"[INFO] Carregando adapters LoRA de: {adapter_path}")
     model = PeftModel.from_pretrained(base, adapter_path)
     model.eval()
     model.to(device)
+    _MODEL_CACHE[cache_key] = model
     return model
 
 
@@ -186,10 +223,11 @@ def predict(
         lista de dicts com as predições por competência para cada texto.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    base_model_name = _resolve_base_model_name(base_model_name)
     print(f"[INFO] Device: {device} | Estratégia: {strategy}")
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-    model = load_model(adapter_path, base_model_name, device)
+    tokenizer = load_tokenizer(base_model_name)
+    model = load_model(adapter_path, base_model_name, device, output_mode="multi_output")
 
     all_input_ids, all_attention_masks, all_essay_ids = _tokenize_texts(
         texts, tokenizer, strategy, stride=stride, min_tokens=min_tokens
@@ -241,8 +279,62 @@ def predict(
     return results
 
 
+def predict_single_output(
+    texts: list,
+    adapter_path: str,
+    base_model_name: str = BASE_MODEL_NAME,
+    strategy: str = "truncate_512",
+    stride: int = 256,
+    min_tokens: int = 32,
+    batch_size: int = 8,
+    as_scores: bool = True,
+):
+    """
+    Faz inferência com um adapter LoRA treinado para uma única competência.
+
+    Retorna uma lista de dicts no formato {"score": valor}, em que valor é nota
+    0-200 quando as_scores=True ou classe 0-5 quando as_scores=False.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    base_model_name = _resolve_base_model_name(base_model_name)
+    print(f"[INFO] Device: {device} | Estratégia: {strategy} | single_output")
+
+    tokenizer = load_tokenizer(base_model_name)
+    model = load_model(adapter_path, base_model_name, device, output_mode="single_output")
+
+    all_input_ids, all_attention_masks, all_essay_ids = _tokenize_texts(
+        texts, tokenizer, strategy, stride=stride, min_tokens=min_tokens
+    )
+
+    accumulator = {i: [] for i in range(len(texts))}
+    n_windows = len(all_input_ids)
+    for start in range(0, n_windows, batch_size):
+        batch_ids_list = all_input_ids[start : start + batch_size]
+        batch_mask_list = all_attention_masks[start : start + batch_size]
+        batch_essay_ids = all_essay_ids[start : start + batch_size]
+
+        input_ids, attention_mask = _pad_batch(batch_ids_list, batch_mask_list, tokenizer)
+        input_ids = input_ids.to(device)
+        attention_mask = attention_mask.to(device)
+
+        with torch.no_grad():
+            out = model(input_ids=input_ids, attention_mask=attention_mask)
+
+        logits = out["logits"]
+        for row_idx, essay_id in enumerate(batch_essay_ids):
+            accumulator[essay_id].append(logits[row_idx].detach().cpu())
+
+    results = []
+    for essay_id in range(len(texts)):
+        mean_logits = torch.stack(accumulator[essay_id]).mean(dim=0)
+        cls = int(mean_logits.argmax().item())
+        results.append({"score": CLASS_TO_SCORE[cls] if as_scores else cls})
+
+    return results
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Inferência multioutput textgrader")
+    parser = argparse.ArgumentParser(description="Inferência multioutput")
     parser.add_argument("--adapter_path", required=True, help="Caminho para a pasta com os adapters LoRA")
     parser.add_argument("--texts", nargs="+", required=True, help="Textos das redações")
     parser.add_argument("--base_model", default=BASE_MODEL_NAME, help="Modelo base HuggingFace")

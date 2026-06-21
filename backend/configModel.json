@@ -1,16 +1,21 @@
 {
-    "comentario": "type pode ser 'pkl' ou 'lora'",
+    "comentario": "output_mode descreve o formato da saida; runtime descreve como o modelo e carregado/executado.",
     "model": "principal",
     "available_models": [
         {
             "name": "principal",
+            "output_mode": "multi_output",
+            "runtime": "lora",
             "path": "adapters/principal",
-            "type": "lora"
+            "base_model": "FacebookAI/xlm-roberta-large",
+            "strategy": "truncate_512"
         },
         {
             "name": "checkpoint_07_08",
+            "output_mode": "multi_output",
+            "runtime": "pkl",
             "path": "checkpoint_07_08.pkl",
-            "type": "pkl"
+            "vectorizer_path": "vectorizer.pkl"
         }
     ]
 }
