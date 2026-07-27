@@ -245,6 +245,8 @@ const Redacao = () => {
   const submittedGrades = extractSubmittedGrades(submissionResult)
   const submittedTotal = submittedGrades.reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)
   const isInvalidSubmission = submissionResult?.ai_quality?.status === 'invalid_submission'
+  const invalidFlagCodes = (submissionResult?.ai_quality?.flags || []).map((flag: any) => flag?.code)
+  const isThemeMismatch = invalidFlagCodes.includes('theme_not_relevant')
 
   return (
     <PageShell maxWidth={1040}>
@@ -397,7 +399,9 @@ const Redacao = () => {
           title={isInvalidSubmission ? 'Redação submetida com nota zero' : 'Redação submetida com sucesso'}
           subTitle={
             isInvalidSubmission
-              ? 'O texto não atende aos critérios mínimos para avaliação por competências. O modelo IA não foi acionado.'
+              ? isThemeMismatch
+                ? 'O texto parece não responder ao tema proposto. O modelo avaliativo não foi acionado.'
+                : 'O texto não atende aos critérios mínimos para avaliação por competências. O modelo IA não foi acionado.'
               : 'A avaliação automática da IA foi registrada. O feedback IA pode levar alguns instantes para aparecer nos detalhes da redação.'
           }
           extra={[

@@ -42,6 +42,7 @@ REDACAO_LIST_PROJECTION = {
     "ai_evaluation": 1,
     "ai_quality": 1,
     "submission_validity": 1,
+    "theme_relevance": 1,
     "is_valid_for_pedagogical_analytics": 1,
     "teacher_review": 1,
     "is_latest_version": 1,

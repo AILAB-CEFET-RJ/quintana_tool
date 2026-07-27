@@ -132,9 +132,9 @@ def build_invalid_submission_feedback(reason):
             "title": item["title"],
             "description": item["description"],
             "score": 0,
-            "diagnosis": "Competência não avaliada porque o texto não atende aos critérios mínimos de submissão.",
-            "suggestion": "Reescreva a redação respeitando o mínimo de 7 linhas escritas.",
-            "practice_action": "Antes de reenviar, desenvolva introdução, parágrafos argumentativos e conclusão.",
+            "diagnosis": "Competência não avaliada porque a submissão foi bloqueada por regra automática.",
+            "suggestion": "Revise a redação antes de reenviar, garantindo extensão mínima e aderência ao tema proposto.",
+            "practice_action": "Antes de reenviar, desenvolva introdução, parágrafos argumentativos e conclusão conectados ao tema.",
         }
         for item in COMPETENCY_DETAILS
     ]
@@ -148,7 +148,7 @@ def build_invalid_submission_feedback(reason):
                 "title": "Texto mínimo para avaliação",
                 "score": 0,
                 "reason": reason,
-                "next_action": "Produza uma redação com pelo menos 7 linhas escritas antes de solicitar nova avaliação."
+                "next_action": "Produza uma redação completa, suficiente e diretamente relacionada ao tema proposto."
             }
         ],
         "rewrite_checklist": [
@@ -161,6 +161,11 @@ def build_invalid_submission_feedback(reason):
                 "id": "complete_structure",
                 "competency": "Geral",
                 "label": "Meu texto tem introdução, desenvolvimento e conclusão?"
+            },
+            {
+                "id": "theme_alignment",
+                "competency": "Geral",
+                "label": "Minha redação responde diretamente ao tema proposto?"
             },
             {
                 "id": "developed_arguments",
@@ -177,9 +182,9 @@ def build_invalid_submission_textual_feedback(reason):
         "",
         reason,
         "",
-        "A avaliação por competências não foi acionada porque o texto não cumpre o mínimo formal para correção.",
+        "A avaliação por competências não foi acionada porque a submissão foi bloqueada por regra automática.",
         "",
-        "Antes de reenviar, escreva uma redação completa, com pelo menos 7 linhas, introdução, desenvolvimento e conclusão.",
+        "Antes de reenviar, escreva uma redação completa, com pelo menos 7 linhas, introdução, desenvolvimento, conclusão e conexão direta com o tema proposto.",
     ])
 
 

@@ -96,3 +96,34 @@ def get_structured_llm_feedback(essay, grades, theme) -> dict:
     )
 
     return json.loads(resp.choices[0].message.content)
+
+
+def check_theme_relevance(essay, theme) -> dict:
+    system_prompt = (
+        "Você é um verificador conservador de aderência temática para redações do ENEM. "
+        "Sua tarefa é identificar apenas casos claros de fuga total ao tema. "
+        "Não bloqueie textos que sejam fracos, superficiais, tangenciais ou parcialmente relacionados; "
+        "esses casos devem ser classificados como parcialmente_aderente. "
+        "Retorne apenas JSON válido, sem markdown, com as chaves: status, confidence e reason. "
+        "status deve ser um destes valores: aderente, parcialmente_aderente, nao_aderente. "
+        "confidence deve ser um número entre 0 e 1. "
+        "reason deve ser uma explicação curta em português."
+    )
+
+    user_prompt = (
+        f"Tema proposto:\n{theme}\n\n"
+        f"Redação submetida:\n{essay}\n\n"
+        "Classifique a aderência da redação ao tema."
+    )
+
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0,
+        response_format={"type": "json_object"},
+    )
+
+    return json.loads(resp.choices[0].message.content)

@@ -2,7 +2,7 @@ import database
 from flask import Flask, g, request, jsonify, Response
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text, get_active_model_info
-from llm import get_llm_feedback, get_structured_llm_feedback
+from llm import check_theme_relevance, get_llm_feedback, get_structured_llm_feedback
 from pedagogy import (
     build_invalid_submission_feedback,
     build_invalid_submission_textual_feedback,
@@ -52,6 +52,7 @@ competencias = {
 }
 
 COMPETENCY_CODES = ["C1", "C2", "C3", "C4", "C5"]
+THEME_RELEVANCE_BLOCK_CONFIDENCE = 0.85
 
 
 def build_ordered_grade_payload(scores):
@@ -87,6 +88,74 @@ def build_ai_evaluation_metadata(created_at):
 
 def build_ai_quality_metadata(text, scores, ai_evaluation, checked_at):
     return validate_ai_evaluation(text, scores, ai_evaluation, checked_at)
+
+
+def build_theme_relevance_unavailable(reason, checked_at):
+    return {
+        "status": "unavailable",
+        "confidence": 0,
+        "reason": reason,
+        "checker": "llm",
+        "checked_at": checked_at,
+    }
+
+
+def normalize_theme_relevance(payload, checked_at):
+    status = str(payload.get("status", "")).strip().lower()
+    if status not in {"aderente", "parcialmente_aderente", "nao_aderente"}:
+        status = "unavailable"
+
+    try:
+        confidence = float(payload.get("confidence", 0))
+    except (TypeError, ValueError):
+        confidence = 0
+
+    return {
+        "status": status,
+        "confidence": max(0, min(1, confidence)),
+        "reason": str(payload.get("reason") or "Sem justificativa informada.")[:500],
+        "checker": "llm",
+        "checked_at": checked_at,
+    }
+
+
+def get_theme_relevance_or_unavailable(essay, theme, checked_at):
+    if not theme:
+        return build_theme_relevance_unavailable("Tema não informado para verificação.", checked_at)
+
+    if not should_use_llm_feedback():
+        return build_theme_relevance_unavailable("Verificação por LLM indisponível.", checked_at)
+
+    try:
+        return normalize_theme_relevance(check_theme_relevance(essay, theme), checked_at)
+    except Exception as exc:
+        if should_expose_errors():
+            app.logger.warning("Theme relevance check unavailable: %s", exc)
+        return build_theme_relevance_unavailable("Verificação por LLM indisponível.", checked_at)
+
+
+def should_block_by_theme_relevance(theme_relevance):
+    return (
+        theme_relevance.get("status") == "nao_aderente"
+        and float(theme_relevance.get("confidence") or 0) >= THEME_RELEVANCE_BLOCK_CONFIDENCE
+    )
+
+
+def build_theme_mismatch_validity(theme_relevance):
+    reason = (
+        "A redação recebeu nota zero porque parece não responder ao tema proposto. "
+        f"{theme_relevance.get('reason', '')}".strip()
+    )
+    return {
+        "is_valid_for_model": False,
+        "zero_grade": True,
+        "code": "theme_not_relevant",
+        "message": reason,
+        "metrics": {
+            "theme_relevance_status": theme_relevance.get("status"),
+            "theme_relevance_confidence": theme_relevance.get("confidence", 0),
+        },
+    }
 
 
 def current_user_id():
@@ -368,7 +437,17 @@ def post_model_response():
         rest_of_essay = '\n'.join(line for line in lines[1:] if line.strip())
 
     now = datetime.now(timezone.utc).isoformat()
+    theme = database.get_tema(id_theme)
     submission_validity = classify_essay_submission(rest_of_essay)
+    theme_relevance = build_theme_relevance_unavailable(
+        "Redação não verificada por já estar inválida pelos critérios mínimos.",
+        now
+    )
+    if not submission_validity["zero_grade"]:
+        theme_relevance = get_theme_relevance_or_unavailable(rest_of_essay, theme, now)
+        if should_block_by_theme_relevance(theme_relevance):
+            submission_validity = build_theme_mismatch_validity(theme_relevance)
+
     if submission_validity["zero_grade"]:
         obj = {f"nota_{index}": 0 for index in range(1, 6)}
     else:
@@ -381,8 +460,6 @@ def post_model_response():
         competencias["comp4"]: float(obj.get('nota_4', 0)),
         competencias["comp5"]: float(obj.get('nota_5', 0))
     }
-
-    theme = database.get_tema(id_theme)
 
     parent_redacao = database.get_redacao_document(rewrite_of) if rewrite_of and ObjectId.is_valid(rewrite_of) else None
     version_group_id = str(parent_redacao.get("version_group_id") or parent_redacao["_id"]) if parent_redacao else None
@@ -448,6 +525,7 @@ def post_model_response():
         "ai_evaluation": ai_evaluation,
         "ai_quality": ai_quality,
         "submission_validity": submission_validity,
+        "theme_relevance": theme_relevance,
         "is_valid_for_pedagogical_analytics": not submission_validity["zero_grade"],
         "teacher_review": {
             "status": "pending",
@@ -513,6 +591,7 @@ def post_model_response():
         ]),
         "ai_quality": ai_quality,
         "submission_validity": submission_validity,
+        "theme_relevance": theme_relevance,
         "correction_source": essay_data["correction_source"],
         "redacao_id": str(essay_id),
         "version_number": version_number
@@ -532,7 +611,17 @@ def post_model_response_witht_ocr():
     essay = get_text(image)
 
     now = datetime.now(timezone.utc).isoformat()
+    theme = database.get_tema(id_theme)
     submission_validity = classify_essay_submission(essay)
+    theme_relevance = build_theme_relevance_unavailable(
+        "Redação não verificada por já estar inválida pelos critérios mínimos.",
+        now
+    )
+    if not submission_validity["zero_grade"]:
+        theme_relevance = get_theme_relevance_or_unavailable(essay, theme, now)
+        if should_block_by_theme_relevance(theme_relevance):
+            submission_validity = build_theme_mismatch_validity(theme_relevance)
+
     if submission_validity["zero_grade"]:
         obj = {f"nota_{index}": 0 for index in range(1, 6)}
     else:
@@ -546,7 +635,6 @@ def post_model_response_witht_ocr():
         "nota5": float(obj.get('nota_5', 0))
     }
 
-    theme = database.get_tema(id_theme)
     if submission_validity["zero_grade"]:
         feedback_structured = build_invalid_submission_feedback(submission_validity["message"])
         feedback_llm = build_invalid_submission_textual_feedback(submission_validity["message"])
@@ -597,6 +685,7 @@ def post_model_response_witht_ocr():
         "ai_evaluation": ai_evaluation,
         "ai_quality": ai_quality,
         "submission_validity": submission_validity,
+        "theme_relevance": theme_relevance,
         "is_valid_for_pedagogical_analytics": not submission_validity["zero_grade"],
         "teacher_review": {
             "status": "pending",
@@ -627,6 +716,7 @@ def post_model_response_witht_ocr():
         ]),
         "ai_quality": ai_quality,
         "submission_validity": submission_validity,
+        "theme_relevance": theme_relevance,
         "correction_source": essay_data["correction_source"],
     })
 

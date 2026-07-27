@@ -98,6 +98,14 @@ class SubmissionValidity(TypedDict, total=False):
     metrics: Dict[str, Any]
 
 
+class ThemeRelevance(TypedDict, total=False):
+    status: str
+    confidence: float
+    reason: str
+    checker: str
+    checked_at: str
+
+
 class RedacaoDocument(TypedDict, total=False):
     _id: str
     titulo: str
@@ -135,6 +143,7 @@ class RedacaoDocument(TypedDict, total=False):
     ai_evaluation: AiEvaluation
     ai_quality: AiQuality
     submission_validity: SubmissionValidity
+    theme_relevance: ThemeRelevance
     is_valid_for_pedagogical_analytics: bool
     teacher_review: TeacherReview
     is_latest_version: bool
@@ -229,6 +238,9 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "correction_source",
             "ai_evaluation",
             "ai_quality",
+            "submission_validity",
+            "theme_relevance",
+            "is_valid_for_pedagogical_analytics",
             "teacher_review",
             "is_latest_version",
             "schema_version",
