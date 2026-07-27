@@ -2,7 +2,7 @@ import axios from 'axios'
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react'
 import { Modal, Collapse, Button, Space, Alert, Card, Statistic, message, Result, Input } from 'antd'
-import { ClearOutlined, CheckOutlined } from '@ant-design/icons'
+import { ClearOutlined, CheckOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import TextArea from 'antd/lib/input/TextArea'
 import { useAuth } from '../../context';
 import { API_URL } from "@/config/config";
@@ -20,6 +20,73 @@ const BACKEND_GRADE_KEYS = [
   'Conhecimento dos mecanismos linguísticos necessários para a construção da argumentação',
   'Proposta de intervenção com respeito aos direitos humanos'
 ]
+
+const MIN_WRITTEN_LINES = 7
+const MIN_WORDS = 30
+const MIN_ALPHA_CHARS = 100
+const MIN_UNIQUE_WORDS = 12
+const MAX_REPEATED_WORD_RATIO = 0.55
+const APPROX_CHARS_PER_LINE = 55
+
+const getEssayMetrics = (text: string) => {
+  const trimmed = text.trim()
+  const nonEmptyLines = trimmed ? trimmed.split(/\r?\n/).filter((line) => line.trim()).length : 0
+  const words = trimmed.match(/\b[\wÀ-ÿ]+\b/gu)?.map((word) => word.toLocaleLowerCase('pt-BR')) || []
+  const alphaChars = trimmed.match(/[A-Za-zÀ-ÿ]/gu)?.length || 0
+  const estimatedWrittenLines = Math.max(nonEmptyLines, Math.floor(alphaChars / APPROX_CHARS_PER_LINE))
+  const uniqueWords = new Set(words).size
+  const wordFrequency = words.reduce<Record<string, number>>((acc, word) => {
+    acc[word] = (acc[word] || 0) + 1
+    return acc
+  }, {})
+  const mostCommonWordCount = Object.values(wordFrequency).reduce((max, value) => Math.max(max, value), 0)
+  const repeatedWordRatio = words.length ? mostCommonWordCount / words.length : 0
+
+  return {
+    nonEmptyLines,
+    estimatedWrittenLines,
+    words: words.length,
+    alphaChars,
+    uniqueWords,
+    repeatedWordRatio
+  }
+}
+
+const getEssayReadiness = (text: string) => {
+  const metrics = getEssayMetrics(text)
+  const criteria = [
+    {
+      key: 'lines',
+      label: 'Mínimo de 7 linhas escritas',
+      value: `${Math.min(metrics.estimatedWrittenLines, MIN_WRITTEN_LINES)}/${MIN_WRITTEN_LINES}`,
+      passed: metrics.estimatedWrittenLines >= MIN_WRITTEN_LINES
+    },
+    {
+      key: 'words',
+      label: 'Texto com pelo menos 30 palavras',
+      value: `${Math.min(metrics.words, MIN_WORDS)}/${MIN_WORDS}`,
+      passed: metrics.words >= MIN_WORDS
+    },
+    {
+      key: 'alpha',
+      label: 'Conteúdo textual suficiente',
+      value: `${Math.min(metrics.alphaChars, MIN_ALPHA_CHARS)}/${MIN_ALPHA_CHARS}`,
+      passed: metrics.alphaChars >= MIN_ALPHA_CHARS
+    },
+    {
+      key: 'diversity',
+      label: 'Diversidade mínima de palavras',
+      value: `${Math.min(metrics.uniqueWords, MIN_UNIQUE_WORDS)}/${MIN_UNIQUE_WORDS}`,
+      passed: metrics.uniqueWords >= MIN_UNIQUE_WORDS && metrics.repeatedWordRatio <= MAX_REPEATED_WORD_RATIO
+    }
+  ]
+
+  return {
+    metrics,
+    criteria,
+    isReady: criteria.every((criterion) => criterion.passed)
+  }
+}
 
 const extractSubmittedGrades = (result: any) => {
   if (!result) return []
@@ -63,6 +130,12 @@ const Redacao = () => {
 
     if (!essay.trim()) {
       message.warning('Escreva a redação antes de enviar.')
+      return
+    }
+
+    const readiness = getEssayReadiness(essay)
+    if (!readiness.isReady) {
+      message.warning('A redação ainda não atende aos critérios mínimos para avaliação.')
       return
     }
 
@@ -168,6 +241,7 @@ const Redacao = () => {
 
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0
   const charCount = essay.length
+  const readiness = getEssayReadiness(essay)
   const submittedGrades = extractSubmittedGrades(submissionResult)
   const submittedTotal = submittedGrades.reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)
   const isInvalidSubmission = submissionResult?.ai_quality?.status === 'invalid_submission'
@@ -216,6 +290,39 @@ const Redacao = () => {
           <Card size="small">
             <Statistic title="Caracteres" value={charCount} />
           </Card>
+          <Card size="small">
+            <Statistic title="Linhas estimadas" value={readiness.metrics.estimatedWrittenLines} suffix="/7" />
+          </Card>
+          <Card size="small">
+            <Statistic title="Palavras distintas" value={readiness.metrics.uniqueWords} />
+          </Card>
+        </div>
+
+        <div style={styles.readinessPanel}>
+          <div style={styles.readinessHeader}>
+            <div>
+              <strong style={styles.readinessTitle}>Pronto para avaliação IA</strong>
+              <span style={styles.readinessSubtitle}>
+                O envio é liberado quando a redação atende aos critérios mínimos.
+              </span>
+            </div>
+            <span style={{ ...styles.readinessBadge, ...(readiness.isReady ? styles.readinessBadgeReady : styles.readinessBadgeBlocked) }}>
+              {readiness.isReady ? 'Liberado' : 'Bloqueado'}
+            </span>
+          </div>
+          <div style={styles.criteriaGrid}>
+            {readiness.criteria.map((criterion) => (
+              <div key={criterion.key} style={styles.criterionItem}>
+                {criterion.passed ? (
+                  <CheckCircleOutlined style={{ color: '#1f8f5f', fontSize: 17 }} />
+                ) : (
+                  <CloseCircleOutlined style={{ color: '#b45309', fontSize: 17 }} />
+                )}
+                <span style={styles.criterionLabel}>{criterion.label}</span>
+                <span style={styles.criterionValue}>{criterion.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ maxWidth: 860, margin: '0 auto 14px' }}>
@@ -268,7 +375,7 @@ const Redacao = () => {
               type="primary"
               onClick={showModalText}
               loading={isSubmitting}
-              disabled={hasSubmitted}
+              disabled={hasSubmitted || !readiness.isReady}
               icon={<CheckOutlined />}
             >
               {hasSubmitted ? 'Redação enviada' : 'Enviar redação'}
@@ -447,6 +554,70 @@ const styles: Record<string, CSSProperties> = {
   },
   gradeItem: {
     borderRadius: 8
+  },
+  readinessPanel: {
+    border: '1px solid #d9eadf',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 16,
+    background: '#f7fbf8'
+  },
+  readinessHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+    marginBottom: 12
+  },
+  readinessTitle: {
+    display: 'block',
+    color: '#1f2937',
+    fontSize: 15
+  },
+  readinessSubtitle: {
+    display: 'block',
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 3
+  },
+  readinessBadge: {
+    borderRadius: 999,
+    padding: '4px 10px',
+    fontSize: 12,
+    fontWeight: 700
+  },
+  readinessBadgeReady: {
+    color: '#146c43',
+    background: '#dff5e8'
+  },
+  readinessBadgeBlocked: {
+    color: '#92400e',
+    background: '#fef3c7'
+  },
+  criteriaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 10
+  },
+  criterionItem: {
+    display: 'grid',
+    gridTemplateColumns: '18px 1fr auto',
+    alignItems: 'center',
+    gap: 8,
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: '9px 10px',
+    background: '#ffffff'
+  },
+  criterionLabel: {
+    color: '#374151',
+    fontSize: 13
+  },
+  criterionValue: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: 700
   }
 }
 
