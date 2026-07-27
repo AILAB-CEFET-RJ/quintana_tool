@@ -3,10 +3,16 @@ from flask import Flask, g, request, jsonify, Response
 from bson import ObjectId
 from functions import evaluate_redacao, persist_essay, get_text, get_active_model_info
 from llm import get_llm_feedback, get_structured_llm_feedback
-from pedagogy import build_structured_feedback, build_textual_feedback_from_structured
+from pedagogy import (
+    build_invalid_submission_feedback,
+    build_invalid_submission_textual_feedback,
+    build_structured_feedback,
+    build_textual_feedback_from_structured,
+)
 from analytics import build_teacher_analytics
 from reporting import build_class_report_pdf, build_student_report_pdf
 from ai_quality import validate_ai_evaluation
+from essay_validation import classify_essay_submission, build_invalid_submission_quality
 from schemas import validate_required_fields
 from flask_cors import CORS
 from config import (
@@ -361,7 +367,12 @@ def post_model_response():
         title = lines[0].strip() if lines and lines[0].strip() else "Sem título"
         rest_of_essay = '\n'.join(line for line in lines[1:] if line.strip())
 
-    obj = evaluate_redacao(essay)
+    now = datetime.now(timezone.utc).isoformat()
+    submission_validity = classify_essay_submission(rest_of_essay)
+    if submission_validity["zero_grade"]:
+        obj = {f"nota_{index}": 0 for index in range(1, 6)}
+    else:
+        obj = evaluate_redacao(essay)
 
     grades = {
         competencias["comp1"]: float(obj.get('nota_1', 0)),
@@ -373,7 +384,6 @@ def post_model_response():
 
     theme = database.get_tema(id_theme)
 
-    now = datetime.now(timezone.utc).isoformat()
     parent_redacao = database.get_redacao_document(rewrite_of) if rewrite_of and ObjectId.is_valid(rewrite_of) else None
     version_group_id = str(parent_redacao.get("version_group_id") or parent_redacao["_id"]) if parent_redacao else None
     version_number = 1
@@ -389,9 +399,13 @@ def post_model_response():
         existing_versions = database.get_redacao_versions(str(parent_redacao["_id"]))
         version_number = max([int(item.get("version_number", 1)) for item in existing_versions] or [1]) + 1
 
-    feedback_structured = build_structured_feedback(grades)
-    feedback_text_fallback = build_textual_feedback_from_structured(feedback_structured)
     ai_evaluation = build_ai_evaluation_metadata(now)
+    if submission_validity["zero_grade"]:
+        feedback_structured = build_invalid_submission_feedback(submission_validity["message"])
+        feedback_text_fallback = build_invalid_submission_textual_feedback(submission_validity["message"])
+    else:
+        feedback_structured = build_structured_feedback(grades)
+        feedback_text_fallback = build_textual_feedback_from_structured(feedback_structured)
     model_scores = [
         grades[competencias["comp1"]],
         grades[competencias["comp2"]],
@@ -399,7 +413,10 @@ def post_model_response():
         grades[competencias["comp4"]],
         grades[competencias["comp5"]],
     ]
-    ai_quality = build_ai_quality_metadata(rest_of_essay.strip(), model_scores, ai_evaluation, now)
+    if submission_validity["zero_grade"]:
+        ai_quality = build_invalid_submission_quality(submission_validity, now)
+    else:
+        ai_quality = build_ai_quality_metadata(rest_of_essay.strip(), model_scores, ai_evaluation, now)
 
     essay_data = {
         "titulo": title,
@@ -427,9 +444,11 @@ def post_model_response():
         "class_id": class_id,
         "activity_id": activity_id,
         "submitted_at": now,
-        "correction_source": "model",
+        "correction_source": "rule" if submission_validity["zero_grade"] else "model",
         "ai_evaluation": ai_evaluation,
         "ai_quality": ai_quality,
+        "submission_validity": submission_validity,
+        "is_valid_for_pedagogical_analytics": not submission_validity["zero_grade"],
         "teacher_review": {
             "status": "pending",
             "source": "professor",
@@ -480,7 +499,8 @@ def post_model_response():
                 }}
             )
 
-    Thread(target=gerar_feedback).start()
+    if not submission_validity["zero_grade"]:
+        Thread(target=gerar_feedback).start()
 
     return jsonify({
         "grades": grades,
@@ -492,6 +512,8 @@ def post_model_response():
             grades[competencias["comp5"]],
         ]),
         "ai_quality": ai_quality,
+        "submission_validity": submission_validity,
+        "correction_source": essay_data["correction_source"],
         "redacao_id": str(essay_id),
         "version_number": version_number
     })
@@ -509,7 +531,12 @@ def post_model_response_witht_ocr():
 
     essay = get_text(image)
 
-    obj = evaluate_redacao(essay)
+    now = datetime.now(timezone.utc).isoformat()
+    submission_validity = classify_essay_submission(essay)
+    if submission_validity["zero_grade"]:
+        obj = {f"nota_{index}": 0 for index in range(1, 6)}
+    else:
+        obj = evaluate_redacao(essay)
 
     grades = {
         "nota1": float(obj.get('nota_1', 0)),
@@ -520,14 +547,20 @@ def post_model_response_witht_ocr():
     }
 
     theme = database.get_tema(id_theme)
-    now = datetime.now(timezone.utc).isoformat()
-    feedback_structured = build_structured_feedback(grades)
-    feedback_llm = build_textual_feedback_from_structured(feedback_structured)
-    feedback_structured_source = "fallback"
+    if submission_validity["zero_grade"]:
+        feedback_structured = build_invalid_submission_feedback(submission_validity["message"])
+        feedback_llm = build_invalid_submission_textual_feedback(submission_validity["message"])
+    else:
+        feedback_structured = build_structured_feedback(grades)
+        feedback_llm = build_textual_feedback_from_structured(feedback_structured)
+    feedback_structured_source = "rule" if submission_validity["zero_grade"] else "fallback"
     ai_evaluation = build_ai_evaluation_metadata(now)
     model_scores = [grades['nota1'], grades['nota2'], grades['nota3'], grades['nota4'], grades['nota5']]
-    ai_quality = build_ai_quality_metadata(essay, model_scores, ai_evaluation, now)
-    if should_use_llm_feedback():
+    if submission_validity["zero_grade"]:
+        ai_quality = build_invalid_submission_quality(submission_validity, now)
+    else:
+        ai_quality = build_ai_quality_metadata(essay, model_scores, ai_evaluation, now)
+    if should_use_llm_feedback() and not submission_validity["zero_grade"]:
         try:
             feedback_llm = get_llm_feedback(essay, grades, theme)
             feedback_structured = validate_structured_feedback_payload(get_structured_llm_feedback(essay, grades, theme))
@@ -560,9 +593,11 @@ def post_model_response_witht_ocr():
         "class_id": class_id,
         "activity_id": activity_id,
         "submitted_at": now,
-        "correction_source": "model",
+        "correction_source": "rule" if submission_validity["zero_grade"] else "model",
         "ai_evaluation": ai_evaluation,
         "ai_quality": ai_quality,
+        "submission_validity": submission_validity,
+        "is_valid_for_pedagogical_analytics": not submission_validity["zero_grade"],
         "teacher_review": {
             "status": "pending",
             "source": "professor",
@@ -590,7 +625,9 @@ def post_model_response_witht_ocr():
             obj.get("nota_4", 0),
             obj.get("nota_5", 0),
         ]),
-        "ai_quality": ai_quality
+        "ai_quality": ai_quality,
+        "submission_validity": submission_validity,
+        "correction_source": essay_data["correction_source"],
     })
 
 

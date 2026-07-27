@@ -22,7 +22,10 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const buildAverageCompetencyRedacao = (redacoes: Redacao[]) => {
-    const latestVersions = redacoes.filter((redacao) => redacao.is_latest_version !== false);
+    const latestVersions = redacoes.filter((redacao) => (
+        redacao.is_latest_version !== false
+        && redacao.is_valid_for_pedagogical_analytics !== false
+    ));
 
     if (!latestVersions.length) {
         return null;
@@ -147,6 +150,7 @@ export interface Redacao {
         comment?: string;
     };
     is_latest_version?: boolean;
+    is_valid_for_pedagogical_analytics?: boolean;
 }
 
 const Home = () => {
@@ -384,6 +388,13 @@ const Home = () => {
 
     const renderAiQualityTag = (redacao: Redacao) => {
         const status = redacao.ai_quality?.status || 'ok';
+        if (status === 'invalid_submission') {
+            return (
+                <Tooltip title={(redacao.ai_quality?.flags || []).map((flag) => flag.message).join(' ') || 'Redação não avaliável.'}>
+                    <Tag color="volcano">Nota zero por regra</Tag>
+                </Tooltip>
+            );
+        }
         if (status === 'requires_review') {
             return (
                 <Tooltip title={(redacao.ai_quality?.flags || []).map((flag) => flag.message).join(' ') || 'Avaliação automática requer revisão.'}>

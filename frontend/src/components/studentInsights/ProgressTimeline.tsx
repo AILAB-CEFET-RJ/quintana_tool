@@ -80,7 +80,10 @@ const buildTrendSummary = (ordered: any[]) => {
 
 const ProgressTimeline: React.FC<ProgressTimelineProps> = ({ redacoes }) => {
   const ordered = [...redacoes]
-    .filter((redacao) => redacao.is_latest_version !== false)
+    .filter((redacao) => (
+      redacao.is_latest_version !== false
+      && redacao.is_valid_for_pedagogical_analytics !== false
+    ))
     .sort((a, b) => getDateValue(a) - getDateValue(b))
 
   if (ordered.length < 2) {

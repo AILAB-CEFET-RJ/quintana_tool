@@ -125,6 +125,64 @@ def build_structured_feedback(grades):
     }
 
 
+def build_invalid_submission_feedback(reason):
+    competencies = [
+        {
+            "code": item["code"],
+            "title": item["title"],
+            "description": item["description"],
+            "score": 0,
+            "diagnosis": "Competência não avaliada porque o texto não atende aos critérios mínimos de submissão.",
+            "suggestion": "Reescreva a redação respeitando o mínimo de 7 linhas escritas.",
+            "practice_action": "Antes de reenviar, desenvolva introdução, parágrafos argumentativos e conclusão.",
+        }
+        for item in COMPETENCY_DETAILS
+    ]
+
+    return {
+        "competencies": competencies,
+        "priorities": [
+            {
+                "rank": 1,
+                "competency": "Geral",
+                "title": "Texto mínimo para avaliação",
+                "score": 0,
+                "reason": reason,
+                "next_action": "Produza uma redação com pelo menos 7 linhas escritas antes de solicitar nova avaliação."
+            }
+        ],
+        "rewrite_checklist": [
+            {
+                "id": "minimum_lines",
+                "competency": "Geral",
+                "label": "Minha redação tem pelo menos 7 linhas escritas?"
+            },
+            {
+                "id": "complete_structure",
+                "competency": "Geral",
+                "label": "Meu texto tem introdução, desenvolvimento e conclusão?"
+            },
+            {
+                "id": "developed_arguments",
+                "competency": "Geral",
+                "label": "Desenvolvi argumentos em vez de enviar apenas palavras soltas?"
+            },
+        ],
+    }
+
+
+def build_invalid_submission_textual_feedback(reason):
+    return "\n".join([
+        "## Redação não avaliável",
+        "",
+        reason,
+        "",
+        "A avaliação por competências não foi acionada porque o texto não cumpre o mínimo formal para correção.",
+        "",
+        "Antes de reenviar, escreva uma redação completa, com pelo menos 7 linhas, introdução, desenvolvimento e conclusão.",
+    ])
+
+
 def build_textual_feedback_from_structured(structured_feedback):
     competencies = structured_feedback.get("competencies", [])
     priorities = structured_feedback.get("priorities", [])

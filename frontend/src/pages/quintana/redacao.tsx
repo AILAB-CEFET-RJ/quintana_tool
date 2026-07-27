@@ -170,6 +170,7 @@ const Redacao = () => {
   const charCount = essay.length
   const submittedGrades = extractSubmittedGrades(submissionResult)
   const submittedTotal = submittedGrades.reduce((sum: number, value: any) => sum + (Number(value) || 0), 0)
+  const isInvalidSubmission = submissionResult?.ai_quality?.status === 'invalid_submission'
 
   return (
     <PageShell maxWidth={1040}>
@@ -285,9 +286,13 @@ const Redacao = () => {
         width={640}
       >
         <Result
-          status="success"
-          title="Redação submetida com sucesso"
-          subTitle="A avaliação automática da IA foi registrada. O feedback IA pode levar alguns instantes para aparecer nos detalhes da redação."
+          status={isInvalidSubmission ? 'warning' : 'success'}
+          title={isInvalidSubmission ? 'Redação submetida com nota zero' : 'Redação submetida com sucesso'}
+          subTitle={
+            isInvalidSubmission
+              ? 'O texto não atende aos critérios mínimos para avaliação por competências. O modelo IA não foi acionado.'
+              : 'A avaliação automática da IA foi registrada. O feedback IA pode levar alguns instantes para aparecer nos detalhes da redação.'
+          }
           extra={[
             <Button key="home" type="primary" onClick={() => router.push('/quintana/home')}>
               Ver minhas redações
@@ -306,9 +311,15 @@ const Redacao = () => {
             {submissionResult.ai_quality?.status && submissionResult.ai_quality.status !== 'ok' && (
               <Alert
                 style={{ marginBottom: 16 }}
-                type={submissionResult.ai_quality.requires_review ? 'warning' : 'info'}
+                type={isInvalidSubmission || submissionResult.ai_quality.requires_review ? 'warning' : 'info'}
                 showIcon
-                message={submissionResult.ai_quality.requires_review ? 'Avaliação IA requer revisão' : 'Revisão humana recomendada'}
+                message={
+                  isInvalidSubmission
+                    ? 'Redação não avaliável'
+                    : submissionResult.ai_quality.requires_review
+                      ? 'Avaliação IA requer revisão'
+                      : 'Revisão humana recomendada'
+                }
                 description={
                   <div>
                     {(submissionResult.ai_quality.flags || []).map((flag: any, index: number) => (

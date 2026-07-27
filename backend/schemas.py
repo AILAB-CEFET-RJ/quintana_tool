@@ -87,6 +87,15 @@ class AiQuality(TypedDict, total=False):
     requires_review: bool
     flags: List[AiQualityFlag]
     checked_at: str
+    metrics: Dict[str, Any]
+
+
+class SubmissionValidity(TypedDict, total=False):
+    is_valid_for_model: bool
+    zero_grade: bool
+    code: str
+    message: str
+    metrics: Dict[str, Any]
 
 
 class RedacaoDocument(TypedDict, total=False):
@@ -125,6 +134,8 @@ class RedacaoDocument(TypedDict, total=False):
     correction_source: str
     ai_evaluation: AiEvaluation
     ai_quality: AiQuality
+    submission_validity: SubmissionValidity
+    is_valid_for_pedagogical_analytics: bool
     teacher_review: TeacherReview
     is_latest_version: bool
     schema_version: int

@@ -87,17 +87,26 @@ const ModalDetalhesRedacao: React.FC<RedacaoDetalhes> = ({ open, onCancel, redac
         if (!quality || quality.status === 'ok') return null
 
         const flags = quality.flags || []
+        const isInvalidSubmission = quality.status === 'invalid_submission'
         const isRequired = quality.status === 'requires_review' || quality.requires_review
         return (
             <Alert
                 style={{ marginBottom: 16 }}
-                type={isRequired ? 'warning' : 'info'}
+                type={isInvalidSubmission || isRequired ? 'warning' : 'info'}
                 showIcon
-                message={isRequired ? 'Avaliação IA requer revisão' : 'Revisão humana recomendada'}
+                message={
+                    isInvalidSubmission
+                        ? 'Redação não avaliável: nota zero por regra'
+                        : isRequired
+                            ? 'Avaliação IA requer revisão'
+                            : 'Revisão humana recomendada'
+                }
                 description={
                     <div>
                         <p style={{ margin: '0 0 8px' }}>
-                            O sistema encontrou sinais de possível inconsistência na avaliação automática.
+                            {isInvalidSubmission
+                                ? 'O modelo IA não foi acionado porque o texto não atende aos critérios mínimos para correção.'
+                                : 'O sistema encontrou sinais de possível inconsistência na avaliação automática.'}
                         </p>
                         {flags.length > 0 && (
                             <ul style={{ margin: 0, paddingLeft: 18 }}>

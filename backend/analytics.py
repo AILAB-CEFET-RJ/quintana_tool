@@ -29,6 +29,7 @@ ANALYTICS_PROJECTION = {
     "class_id": 1,
     "activity_id": 1,
     "is_latest_version": 1,
+    "is_valid_for_pedagogical_analytics": 1,
 }
 
 
@@ -84,6 +85,11 @@ def teacher_essays(professor_id, class_id=None, activity_id=None):
 
     if activity_id:
         query = {"$and": [query, {"activity_id": activity_id}]}
+
+    query = {"$and": [
+        query,
+        {"is_valid_for_pedagogical_analytics": {"$ne": False}},
+    ]}
 
     redacoes = list(database.db.redacoes.find(query, ANALYTICS_PROJECTION))
     return redacoes, temas
